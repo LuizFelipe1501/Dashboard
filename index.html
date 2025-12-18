@@ -8,38 +8,76 @@
 <body>
 
 <h1>Hallucination – Sistema de Monitoramento</h1>
-<p>Eventos em tempo real:</p>
-<div id="events"></div>
+<video id="camera" width="640" height="480" autoplay></video>
+<p>
+  <button id="checkBtn">Check</button>
+</p>
+<div id="result"></div>
 
 <script>
-const BACKEND_EVENTS_URL = "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/latest";
+const BACKEND_URL = "https://hallucinationchecker-dxapbcfggjhsd2aq.brazilsouth-01.azurecontainerapps.io/detect";
+const EVENTS_URL = "https://hallucinationchecker-dxapbcfggjhsd2aq.brazilsouth-01.azurecontainerapps.io/events";
+const DEVICE_ID = Math.random().toString(36).substring(2, 10);
 
-async function loadEvents() {
+const video = document.getElementById("camera");
+const checkBtn = document.getElementById("checkBtn");
+const resultDiv = document.getElementById("result");
+
+let stream;
+
+// Abre a câmera do usuário
+async function startCamera() {
+    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+}
+
+startCamera();
+
+// Captura frame e envia ao backend
+async function sendFrame() {
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.6));
+
     try {
-        const res = await fetch(BACKEND_EVENTS_URL);
-        const data = await res.json();
-        const container = document.getElementById("events");
-        container.innerHTML = "";
+        const formData = new FormData();
+        formData.append("file", blob, "frame.jpg");
 
-        for (const [device, event] of Object.entries(data)) {
-            const div = document.createElement("div");
-            div.className = "event-card";
-            div.innerHTML = `
-                <strong>Dispositivo:</strong> ${device}<br>
-                <strong>Pessoas detectadas:</strong> ${event.people_detected}<br>
-                <strong>Decisão:</strong> ${event.decision}<br>
-                <strong>Horário:</strong> ${new Date(event.timestamp * 1000).toLocaleString()}
-            `;
-            container.appendChild(div);
-        }
-    } catch (e) {
-        console.error(e);
+        const res = await fetch(BACKEND_URL, {
+            method: "POST",
+            body: formData
+        });
+
+        if (!res.ok) throw new Error("Erro no backend");
+
+        const data = await res.json();
+        resultDiv.innerHTML = `
+            Pessoas detectadas: ${data.people_detected}<br>
+            Decisão: ${data.decision}
+        `;
+
+        // Envia evento
+        await fetch(EVENTS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                device_id: DEVICE_ID,
+                people_detected: data.people_detected,
+                timestamp: Math.floor(Date.now() / 1000)
+            })
+        });
+
+    } catch (err) {
+        console.error(err);
+        resultDiv.textContent = "Erro ao enviar frame";
     }
 }
 
-// Atualiza a cada 1,5 segundos
-setInterval(loadEvents, 1500);
-loadEvents();
+// Dispara o check apenas quando clicar no botão
+checkBtn.addEventListener("click", sendFrame);
 </script>
 
 </body>
