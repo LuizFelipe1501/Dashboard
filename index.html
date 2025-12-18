@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Hallucination System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Hallucination – Sistema de Monitoramento</h1>
+<p>Eventos em tempo real:</p>
+<div id="events"></div>
+
+<script>
+const BACKEND_EVENTS_URL = "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/latest";
+
+async function loadEvents() {
+    try {
+        const res = await fetch(BACKEND_EVENTS_URL);
+        const data = await res.json();
+        const container = document.getElementById("events");
+        container.innerHTML = "";
+
+        for (const [device, event] of Object.entries(data)) {
+            const div = document.createElement("div");
+            div.className = "event-card";
+            div.innerHTML = `
+                <strong>Dispositivo:</strong> ${device}<br>
+                <strong>Pessoas detectadas:</strong> ${event.people_detected}<br>
+                <strong>Decisão:</strong> ${event.decision}<br>
+                <strong>Horário:</strong> ${new Date(event.timestamp * 1000).toLocaleString()}
+            `;
+            container.appendChild(div);
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// Atualiza a cada 1,5 segundos
+setInterval(loadEvents, 1500);
+loadEvents();
+</script>
+
+</body>
+</html>
