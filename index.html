@@ -2,83 +2,86 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Hallucination System</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Hallucination Checker</title>
+  <style>
+    video, canvas {
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
 </head>
 <body>
+  <h1 style="text-align:center">Hallucination Checker</h1>
+  <video id="video" width="640" height="480" autoplay></video>
+  <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+  <p id="status" style="text-align:center">Aguardando...</p>
 
-<h1>Hallucination – Sistema de Monitoramento</h1>
-<video id="camera" width="640" height="480" autoplay></video>
-<p>
-  <button id="checkBtn">Check</button>
-</p>
-<div id="result"></div>
+  <script>
+    const BACKEND_URL = "https://hallucinationchecker-dxapbcfggjhsd2aq.brazilsouth.azurecontainerapps.io/detect";
+    const EVENTS_URL = "https://hallucinationchecker-dxapbcfggjhsd2aq.brazilsouth.azurecontainerapps.io/events";
 
-<script>
-const BACKEND_URL = "https://hallucinationchecker-dxapbcfggjhsd2aq.brazilsouth-01.azurecontainerapps.io/detect";
-const EVENTS_URL = "https://hallucinationchecker-dxapbcfggjhsd2aq.brazilsouth-01.azurecontainerapps.io/events";
-const DEVICE_ID = Math.random().toString(36).substring(2, 10);
-
-const video = document.getElementById("camera");
-const checkBtn = document.getElementById("checkBtn");
-const resultDiv = document.getElementById("result");
-
-let stream;
-
-// Abre a câmera do usuário
-async function startCamera() {
-    stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = stream;
-}
-
-startCamera();
-
-// Captura frame e envia ao backend
-async function sendFrame() {
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.6));
+    const status = document.getElementById("status");
 
-    try {
-        const formData = new FormData();
-        formData.append("file", blob, "frame.jpg");
+    const DEVICE_ID = Math.random().toString(36).substring(2, 10);
+    const SEND_EVERY_N_FRAMES = 5;
+    let frameCount = 0;
+    let lastData = { people_detected: 0, decision: "SEM EVIDÊNCIA OBJETIVA", boxes: [] };
 
-        const res = await fetch(BACKEND_URL, {
-            method: "POST",
-            body: formData
-        });
-
-        if (!res.ok) throw new Error("Erro no backend");
-
-        const data = await res.json();
-        resultDiv.innerHTML = `
-            Pessoas detectadas: ${data.people_detected}<br>
-            Decisão: ${data.decision}
-        `;
-
-        // Envia evento
-        await fetch(EVENTS_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                device_id: DEVICE_ID,
-                people_detected: data.people_detected,
-                timestamp: Math.floor(Date.now() / 1000)
-            })
-        });
-
-    } catch (err) {
-        console.error(err);
-        resultDiv.textContent = "Erro ao enviar frame";
+    async function startCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      requestAnimationFrame(processFrame);
     }
-}
 
-// Dispara o check apenas quando clicar no botão
-checkBtn.addEventListener("click", sendFrame);
-</script>
+    async function processFrame() {
+      frameCount++;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+      if (frameCount % SEND_EVERY_N_FRAMES === 0) {
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+          const formData = new FormData();
+          formData.append("file", blob, "frame.jpg");
+
+          try {
+            const response = await fetch(BACKEND_URL, { method: "POST", body: formData });
+            if (response.ok) {
+              lastData = await response.json();
+
+              await fetch(EVENTS_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  device_id: DEVICE_ID,
+                  people_detected: lastData.people_detected,
+                  timestamp: Math.floor(Date.now() / 1000)
+                })
+              });
+            }
+          } catch (err) {
+            console.warn("Erro enviando frame:", err);
+          }
+        }, "image/jpeg", 0.8);
+      }
+
+      drawBoxes(lastData.boxes);
+      status.textContent = `Pessoas: ${lastData.people_detected} | ${lastData.decision}`;
+      requestAnimationFrame(processFrame);
+    }
+
+    function drawBoxes(boxes) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "red";
+      boxes.forEach(b => {
+        ctx.strokeRect(b.x1, b.y1, b.x2 - b.x1, b.y2 - b.y1);
+      });
+    }
+
+    startCamera();
+  </script>
 </body>
 </html>
