@@ -2,38 +2,135 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Hallucination Checker</title>
+<title>HALU – Assistive AI Dashboard</title>
+
 <style>
-  video, canvas {
-    display: block;
-    margin: 0 auto;
-  }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+header {
+  background: #020617;
+  padding: 15px;
+  text-align: center;
+}
+
+main {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 15px;
+  padding: 15px;
+}
+
+video, canvas {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.panel {
+  background: #020617;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.status {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 6px;
+  background: #334155;
+}
+
+.alert {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 6px;
+  background: #1e293b;
+}
+
+.alert.high {
+  background: #7f1d1d;
+}
+
+button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background: #38bdf8;
+  color: #020617;
+  font-weight: bold;
+  cursor: pointer;
+}
 </style>
 </head>
+
 <body>
-<h1 style="text-align:center">Hallucination Checker</h1>
-<video id="video" width="640" height="480" autoplay></video>
-<canvas id="canvas" width="640" height="480"></canvas>
-<p id="status" style="text-align:center">Aguardando...</p>
+
+<header>
+  <h2>HALU – Assistive AI for Neurodivergent People</h2>
+</header>
+
+<main>
+
+  <!-- VISÃO -->
+  <div class="panel">
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="panel">
+    <h3>System Status</h3>
+
+    <div class="status" id="status">
+      Aguardando sistema...
+    </div>
+
+    <div class="alert" id="alertBox">
+      Nenhum alerta crítico.
+    </div>
+
+    <button onclick="simulateVoice()">
+      Simular resposta por voz
+    </button>
+
+    <button onclick="askEmergency()">
+      Decisão de emergência
+    </button>
+  </div>
+
+</main>
 
 <script>
 const BACKEND_URL = "https://hallucinationchecker-dxapbcfggjhsd2aq.brazilsouth.azurecontainerapps.io/detect";
-const EVENTS_URL = "https://hallucinationchecker-dxapbcfggjhsd2aq.brazilsouth.azurecontainerapps.io/events";
+const EVENTS_URL  = "https://hallucinationchecker-dxapbcfggjhsd2aq.brazilsouth.azurecontainerapps.io/events";
 
-const video = document.getElementById("video");
+const video  = document.getElementById("video");
 const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const status = document.getElementById("status");
+const ctx    = canvas.getContext("2d");
+
+const statusBox = document.getElementById("status");
+const alertBox  = document.getElementById("alertBox");
 
 const DEVICE_ID = Math.random().toString(36).substring(2, 10);
 const SEND_EVERY_N_FRAMES = 5;
+
 let frameCount = 0;
 let lastData = { people_detected: 0, decision: "SEM EVIDÊNCIA OBJETIVA", boxes: [] };
 
 async function startCamera() {
   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
   video.srcObject = stream;
-  requestAnimationFrame(processFrame);
+
+  video.onloadedmetadata = () => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    requestAnimationFrame(processFrame);
+  };
 }
 
 async function processFrame() {
@@ -43,13 +140,24 @@ async function processFrame() {
   if (frameCount % SEND_EVERY_N_FRAMES === 0) {
     canvas.toBlob(async (blob) => {
       if (!blob) return;
+
       const formData = new FormData();
       formData.append("file", blob, "frame.jpg");
 
       try {
-        const response = await fetch(BACKEND_URL, { method: "POST", body: formData });
+        const response = await fetch(BACKEND_URL, {
+          method: "POST",
+          body: formData
+        });
+
         if (response.ok) {
           lastData = await response.json();
+
+          statusBox.innerText =
+            `Pessoas detectadas: ${lastData.people_detected}
+Decisão: ${lastData.decision}`;
+
+          drawBoxes(lastData.boxes);
 
           await fetch(EVENTS_URL, {
             method: "POST",
@@ -60,30 +168,49 @@ async function processFrame() {
               timestamp: Math.floor(Date.now() / 1000)
             })
           });
-        } else {
-          console.warn("Erro no backend:", response.status);
+
         }
       } catch (err) {
-        console.warn("Erro enviando frame:", err);
+        statusBox.innerText = "Erro ao conectar com backend";
       }
-    }, "image/jpeg", 1.0);
+    }, "image/jpeg", 0.8);
   }
 
-  drawBoxes(lastData.boxes);
-  status.textContent = `Pessoas: ${lastData.people_detected} | ${lastData.decision}`;
   requestAnimationFrame(processFrame);
 }
 
 function drawBoxes(boxes) {
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = "red";
   boxes.forEach(b => {
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 2;
     ctx.strokeRect(b.x1, b.y1, b.x2 - b.x1, b.y2 - b.y1);
   });
 }
 
+function simulateVoice() {
+  alertBox.className = "alert";
+  alertBox.innerText =
+    "HALU: Respire fundo. Estou aqui com você. O ambiente parece seguro.";
+}
+
+function askEmergency() {
+  const decision = confirm(
+    "Situação potencialmente crítica detectada.\nDeseja acionar serviços de emergência?"
+  );
+
+  if (decision) {
+    alertBox.className = "alert high";
+    alertBox.innerText =
+      "Usuário CONFIRMOU ação de emergência (simulada).";
+  } else {
+    alertBox.className = "alert";
+    alertBox.innerText =
+      "Usuário recusou contato de emergência. Monitoramento contínuo.";
+  }
+}
+
 startCamera();
 </script>
+
 </body>
 </html>
