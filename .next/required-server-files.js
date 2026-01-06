@@ -141,8 +141,8 @@ self.__SERVER_FILES_MANIFEST={
       "isExperimentalCompile": false
     }
   },
-  "appDir": "C:\\Users\\luizf\\Documents\\GitHub\\Dashboard",
-  "relativeAppDir": "",
+  "appDir": "C:\\Users\\luizf\\Documents\\GitHub\\Hallucinationchecker\\dashboard",
+  "relativeAppDir": "dashboard",
   "files": [
     ".next\\routes-manifest.json",
     ".next\\server\\pages-manifest.json",
