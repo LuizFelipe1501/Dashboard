@@ -154,7 +154,7 @@ export default function VoiceAssistant({
       disabled={status !== "idle"}
       className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold disabled:opacity-50"
     >
-      {status === "idle" && "🎙 Speak"}
+      {status === "idle" && "🎙 Ask"}
       {status === "listening" && "👂 Listening..."}
       {status === "thinking" && "🧠 Thinking..."}
       {status === "speaking" && "🔊 Speaking..."}
