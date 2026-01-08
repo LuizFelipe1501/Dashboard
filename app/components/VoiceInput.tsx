@@ -50,7 +50,7 @@ export default function VoiceInput() {
         onClick={startListening}
         className="mt-4 w-full rounded-lg bg-blue-600 py-3 font-semibold hover:bg-blue-500 transition"
       >
-        🎙 Speak
+        🎙 Ask
       </button>
     </div>
   );
