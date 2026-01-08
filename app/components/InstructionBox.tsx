@@ -5,7 +5,7 @@ export default function InstructionBox() {
 
       <ol className="text-sm text-neutral-300 space-y-2 list-decimal list-inside">
         <li>Allow camera and microphone access.</li>
-        <li>Click the <strong>Speak</strong> button.</li>
+        <li>Click the <strong>Ask</strong> button.</li>
         <li>
           Ask questions like:
           <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
