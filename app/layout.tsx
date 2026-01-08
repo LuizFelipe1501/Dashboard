@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Hallucination Checker",
+  title: "LuminaVision",
   description: "Real-time perception confirmation dashboard",
 };
 

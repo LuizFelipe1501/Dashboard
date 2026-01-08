@@ -5,6 +5,7 @@ import CameraView from "./components/CameraView";
 import PeopleCounter from "./components/PeopleCounter";
 import SceneStatus from "./components/SceneStatus";
 import VoiceAssistant from "./components/VoiceAssistant";
+import InstructionBox from "./components/InstructionBox";
 
 const BACKEND_URL =
   "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io";
@@ -13,7 +14,6 @@ export default function Home() {
   const [peopleDetected, setPeopleDetected] = useState<number>(0);
   const [sceneState, setSceneState] = useState<string>("UNKNOWN");
 
-  // 🔁 Puxa estado real do backend
   useEffect(() => {
     const fetchStatus = async () => {
       try {
@@ -22,9 +22,7 @@ export default function Home() {
 
         setPeopleDetected(data.people_detected ?? 0);
         setSceneState(data.scene_state ?? "UNKNOWN");
-      } catch {
-        // fallback silencioso (demo não quebra)
-      }
+      } catch {}
     };
 
     fetchStatus();
@@ -38,20 +36,26 @@ export default function Home() {
         Hallucination Checker — Interactive Demo
       </h1>
 
-      {/* 🎥 Câmera real */}
-      <CameraView />
+      {/* 🧱 Layout principal */}
+      <div className="flex gap-6 items-start">
+        {/* 📘 Instruções */}
+        <InstructionBox />
 
-      {/* 📊 Estado objetivo */}
-      <div className="flex gap-4">
-        <PeopleCounter demo={peopleDetected} />
-        <SceneStatus sceneState={sceneState} />
+        {/* 🎥 Câmera + status */}
+        <div className="flex flex-col items-center gap-4">
+          <CameraView />
+
+          <div className="flex gap-4">
+            <PeopleCounter demo={peopleDetected} />
+            <SceneStatus sceneState={sceneState} />
+          </div>
+
+          <VoiceAssistant
+            peopleDetected={peopleDetected}
+            sceneState={sceneState}
+          />
+        </div>
       </div>
-
-      {/* 🎙️ Voz + IA */}
-      <VoiceAssistant
-        peopleDetected={peopleDetected}
-        sceneState={sceneState}
-      />
     </main>
   );
 }
