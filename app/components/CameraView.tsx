@@ -73,31 +73,43 @@ export default function CameraView() {
       }
     }
 
-    function getVideoCoverOffset() {
+    function getVideoTransform() {
       const video = videoRef.current
       const container = containerRef.current
-      if (!video || !container) return { offsetX: 0, offsetY: 0, scale: 1 }
-
-      const videoRatio = video.videoWidth / video.videoHeight
-      const containerRatio = container.clientWidth / container.clientHeight
-
-      let scale: number
-      let offsetX = 0
-      let offsetY = 0
-
-      if (containerRatio > videoRatio) {
-        // Container é mais largo - vídeo é cortado em cima/baixo
-        scale = container.clientWidth / video.videoWidth
-        const scaledHeight = video.videoHeight * scale
-        offsetY = (scaledHeight - container.clientHeight) / 2
-      } else {
-        // Container é mais alto - vídeo é cortado nas laterais
-        scale = container.clientHeight / video.videoHeight
-        const scaledWidth = video.videoWidth * scale
-        offsetX = (scaledWidth - container.clientWidth) / 2
+      if (!video || !container || !video.videoWidth || !video.videoHeight) {
+        return { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 }
       }
 
-      return { offsetX, offsetY, scale }
+      const videoW = video.videoWidth
+      const videoH = video.videoHeight
+      const containerW = container.clientWidth
+      const containerH = container.clientHeight
+
+      const videoRatio = videoW / videoH
+      const containerRatio = containerW / containerH
+
+      let renderW: number
+      let renderH: number
+
+      if (containerRatio > videoRatio) {
+        // Container mais largo - vídeo escala pela largura, corta altura
+        renderW = containerW
+        renderH = containerW / videoRatio
+      } else {
+        // Container mais alto - vídeo escala pela altura, corta largura
+        renderH = containerH
+        renderW = containerH * videoRatio
+      }
+
+      // Offset é a diferença entre o tamanho renderizado e o container, dividido por 2 (centralizado)
+      const offsetX = (renderW - containerW) / 2
+      const offsetY = (renderH - containerH) / 2
+
+      // Scale para converter coordenadas normalizadas (0-1) para pixels renderizados
+      const scaleX = renderW
+      const scaleY = renderH
+
+      return { scaleX, scaleY, offsetX, offsetY }
     }
 
     function animate() {
@@ -117,7 +129,7 @@ export default function CameraView() {
       ctx.strokeStyle = "#00ff00"
       ctx.lineWidth = 2
 
-      const { offsetX, offsetY, scale } = getVideoCoverOffset()
+      const { scaleX, scaleY, offsetX, offsetY } = getVideoTransform()
 
       const smoothed = targetPolygons.current.map((poly, i) =>
         lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current),
@@ -126,8 +138,9 @@ export default function CameraView() {
       smoothed.forEach((polygon) => {
         ctx.beginPath()
         polygon.forEach((p, i) => {
-          const x = p.x * video.videoWidth * scale - offsetX
-          const y = p.y * video.videoHeight * scale - offsetY
+          // Coordenadas normalizadas (0-1) -> pixels na área renderizada -> menos offset
+          const x = p.x * scaleX - offsetX
+          const y = p.y * scaleY - offsetY
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
         })
         ctx.closePath()
