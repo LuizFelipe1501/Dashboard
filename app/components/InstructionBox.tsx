@@ -1,26 +1,32 @@
 export default function InstructionBox() {
   return (
-    <div className="bg-[#c9a7f5] border-2 border-yellow-300 rounded-2xl p-5 max-w-sm shadow-lg">
-      <h2 className="text-lg font-bold mb-3 text-black">
-        How to Use the Demo
+    <div className="hud-panel max-w-sm text-sm text-neutral-200">
+      {/* HUD corners */}
+      <span className="hud-corner top-left" />
+      <span className="hud-corner top-right" />
+      <span className="hud-corner bottom-left" />
+      <span className="hud-corner bottom-right" />
+
+      <h2 className="text-base font-semibold mb-3 tracking-wide text-white">
+        HOW TO USE
       </h2>
 
-      <ol className="text-sm text-black space-y-2 list-decimal list-inside">
-        <li>Allow camera and microphone access.</li>
-        <li>Press the <strong>Ask</strong> button.</li>
+      <ol className="space-y-2 list-decimal list-inside text-neutral-300">
+        <li>Allow camera & microphone.</li>
+        <li>Press the <span className="text-white font-medium">Ask</span> button.</li>
         <li>
-          Ask questions such as:
-          <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-            <li>“Is anyone around me?”</li>
-            <li>“How many people do you see?”</li>
-            <li>“Is the environment safe?”</li>
+          Ask things like:
+          <ul className="mt-1 ml-4 list-disc text-neutral-400 space-y-1">
+            <li>Is anyone around me?</li>
+            <li>How many people do you see?</li>
+            <li>Is the environment safe?</li>
           </ul>
         </li>
-        <li>The system responds using real visual context.</li>
+        <li>Answers use real visual context.</li>
       </ol>
 
-      <p className="text-xs text-black/70 mt-4 italic">
-        This is a demo. No data is stored.
+      <p className="mt-4 text-xs text-neutral-400 italic">
+        Demo only. No data is stored.
       </p>
     </div>
   );

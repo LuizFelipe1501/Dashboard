@@ -1,14 +1,38 @@
 export default function LumiAvatar() {
   return (
-    <div className="bg-purple-700 border-4 border-yellow-300 rounded-full p-6 flex flex-col items-center">
-      <img
-        src="/lumi.png"
-        alt="Lumi"
-        className="w-32 h-32 rounded-full"
-      />
-      <button className="mt-4 bg-[#c9a6f2] text-black px-4 py-2 rounded-full font-semibold">
+    <div className="hud-panel flex flex-col items-center gap-4 max-w-[220px]">
+      
+      <div className="relative">
+        <img
+          src="/lumi.png"
+          alt="Lumi"
+          className="w-24 h-24 rounded-full border border-white/20 shadow-lg"
+        />
+
+        {/* Glow sutil */}
+        <div className="absolute inset-0 rounded-full blur-xl bg-purple-500/20 -z-10" />
+      </div>
+
+      <span className="text-xs uppercase tracking-widest text-purple-300">
+        Lumi AI
+      </span>
+
+      <button
+        className="
+          w-full
+          text-sm
+          py-2
+          rounded-md
+          bg-purple-600/20
+          border border-purple-400/30
+          text-purple-200
+          hover:bg-purple-600/30
+          transition
+        "
+      >
         Ask Lumi
       </button>
+
     </div>
   );
 }

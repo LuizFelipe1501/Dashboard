@@ -17,7 +17,7 @@ body {
 /* ===== HUD PANEL ===== */
 .hud-panel {
   position: relative;
-  background: #020617; /* zinc-950 */
+  background: #470088; /* zinc-950 */
   border: 1px solid rgba(0, 255, 0, 0.25);
   padding: 1.5rem;
   border-radius: 12px;
