@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== BASE ===== */
 :root {
   --background: #091b45;
   --foreground: #ededed;
@@ -14,7 +13,7 @@ html, body, #__next {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  overflow-y: auto; /* permite scroll vertical se precisar */
+  overflow-y: auto;
 }
 
 * {
@@ -30,35 +29,7 @@ body {
   line-height: 1.5;
 }
 
-/* ===== RESET DE ELEMENTOS ===== */
-h1, h2, h3, h4, h5, h6, p, ol, ul {
-  margin: 0;
-}
-
-ol, ul {
-  padding-left: 1.5rem;
-}
-
-/* ===== HUD PANEL (removido min-width e glow forte) ===== */
-.hud-panel {
-  background: rgba(71, 0, 136, 0.6); /* roxo mais transparente */
-  border: 2px solid rgba(255, 215, 0, 0.4); /* amarelo suave */
-  padding: 1rem; /* menor que 1.5rem */
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-}
-
-/* Removi os .hud-corner completamente (eles adicionam 14px de borda extra) */
-.hud-corner {
-  display: none; /* ou remova a classe dos componentes */
-}
-
-/* ===== CLASSES ÚTEIS PARA RESPONSIVIDADE ===== */
-@media (max-width: 640px) {
-  .text-responsive {
-    font-size: 0.875rem; /* 14px */
-  }
-  .p-responsive {
-    padding: 0.75rem;
-  }
+/* Removi .hud-panel completamente - use classes diretas nos componentes */
+.hud-panel, .hud-corner {
+  display: none !important; /* força remoção se ainda estiver em cache */
 }

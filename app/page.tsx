@@ -32,78 +32,25 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#0a1a3a] text-white overflow-hidden">
-      {/* Container principal com padding responsivo e max-width */}
-      <div className="max-w-screen-xl mx-auto px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-        {/* Título */}
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center mb-6 lg:mb-8 text-purple-300">
-          LuminaVision – Interactive Demo
-        </h1>
+    <main className="h-screen bg-[#091b45] text-white flex flex-col overflow-hidden">
+      <h1 className="text-2xl font-bold text-center py-4 bg-black/30">
+        LuminaVision – Demo
+      </h1>
 
-        {/* Grid principal: Instruções + Câmera */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-8">
-          {/* Painel de instruções */}
-          <div className="
-            bg-purple-900/70 border-4 border-yellow-400 rounded-2xl sm:rounded-3xl 
-            p-5 sm:p-7 lg:p-8 shadow-lg shadow-purple-900/30
-          ">
-            <InstructionBox />
-          </div>
-
-          {/* Câmera com altura limitada */}
-          <div className="
-            relative w-full aspect-[4/3] sm:aspect-video max-h-[45vh] lg:max-h-[65vh] 
-            bg-black rounded-2xl lg:rounded-3xl overflow-hidden
-            shadow-2xl shadow-purple-900/40 border-2 border-purple-600/40
-          ">
-            <CameraView />
-          </div>
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
+        <div className="bg-purple-900/60 rounded-lg p-4 overflow-auto">
+          <InstructionBox />
         </div>
 
-        {/* Barra inferior: Avatar + Voice + Status */}
-        <div className="
-          mt-6 lg:mt-10 bg-purple-800/90 border-4 border-yellow-400 rounded-2xl sm:rounded-3xl 
-          p-5 sm:p-6 lg:p-8 backdrop-blur-md
-          flex flex-col md:flex-row items-center gap-5 lg:gap-8
-        ">
-          {/* Avatar + Botão Ask */}
-          <div className="flex flex-col items-center min-w-[140px] md:min-w-[180px]">
-            <div className="
-              w-28 h-28 sm:w-36 sm:h-36 lg:w-44 lg:h-44 
-              rounded-full overflow-hidden border-4 border-yellow-300 
-              bg-purple-700 shadow-xl
-            ">
-              {/* <img src="/lumi-avatar.png" alt="Lumi" className="w-full h-full object-cover" /> */}
-              <div className="w-full h-full flex items-center justify-center text-5xl sm:text-6xl">
-                👧
-              </div>
-            </div>
-
-            <button className="
-              mt-3 bg-purple-600 hover:bg-purple-500 
-              text-white font-medium py-2 px-6 rounded-full
-              border-2 border-yellow-300 shadow-md text-sm sm:text-base
-              transition-all hover:scale-105
-            ">
-              Ask Lumi
-            </button>
-          </div>
-
-          {/* Voice Assistant - central */}
-          <div className="flex-1 w-full">
-            <VoiceAssistant peopleDetected={peopleDetected} sceneState={sceneState} />
-          </div>
-
-          {/* Status - à direita ou empilhados */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4 w-full lg:w-auto lg:min-w-[260px]">
-            <div className="bg-purple-900/60 border-2 border-yellow-400 rounded-xl p-4 text-center">
-              <PeopleCounter demo={peopleDetected} />
-            </div>
-            <div className="bg-purple-900/60 border-2 border-yellow-400 rounded-xl p-4 text-center">
-              <SceneStatus sceneState={sceneState} />
-            </div>
-          </div>
+        <div className="bg-black rounded-lg overflow-hidden h-full">
+          <CameraView />
         </div>
+      </div>
+
+      <div className="bg-purple-900/80 p-4 flex flex-wrap gap-4 justify-center">
+        <VoiceAssistant peopleDetected={0} sceneState="UNKNOWN" />
+        <PeopleCounter demo={0} />
+        <SceneStatus sceneState="UNKNOWN" />
       </div>
     </main>
   );
