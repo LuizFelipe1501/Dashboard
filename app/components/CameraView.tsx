@@ -17,7 +17,6 @@ function lerpPolygon(from: Point[], to: Point[], t: number): Point[] {
 }
 
 export default function CameraView() {
-  const containerRef = useRef<HTMLDivElement>(null); // Referência para o layout novo
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const captureRef = useRef<HTMLCanvasElement>(null);
@@ -28,7 +27,7 @@ export default function CameraView() {
   const alpha = useRef(1);
 
   useEffect(() => {
-    let detectionTimer: any;
+    let detectionTimer: NodeJS.Timeout;
     let rafId: number;
 
     async function startCamera() {
@@ -37,60 +36,46 @@ export default function CameraView() {
           video: { width: { ideal: 1280 }, height: { ideal: 720 } }
         });
 
-        const video = videoRef.current!;
-        video.srcObject = stream;
-
-        video.onloadedmetadata = () => {
-          video.play();
-          setupCanvases();
-          animate();
-          startDetectionLoop();
-        };
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play();
+            setupCanvases();
+            animate();
+            startDetectionLoop();
+          };
+        }
       } catch (err) {
-        console.error("Erro ao abrir câmera:", err);
+        console.error("Erro ao acessar câmera:", err);
       }
     }
 
     function setupCanvases() {
-      const video = videoRef.current!;
-      // Mantém a lógica de captura no tamanho real do vídeo
+      const video = videoRef.current;
+      if (!video) return;
+
+      /** * SEGREDO DO CÓDIGO ANTIGO: 
+       * O tamanho interno (resolução) do Canvas deve ser IGUAL ao do Vídeo.
+       */
+      if (overlayRef.current) {
+        overlayRef.current.width = video.videoWidth;
+        overlayRef.current.height = video.videoHeight;
+      }
       if (captureRef.current) {
         captureRef.current.width = video.videoWidth;
         captureRef.current.height = video.videoHeight;
       }
-      updateOverlaySize();
-    }
-
-    // Função para o canvas sempre preencher o container do layout novo
-    function updateOverlaySize() {
-      if (containerRef.current && overlayRef.current) {
-        overlayRef.current.width = containerRef.current.clientWidth;
-        overlayRef.current.height = containerRef.current.clientHeight;
-      }
     }
 
     function animate() {
-      const canvas = overlayRef.current!;
-      const video = videoRef.current!;
-      const container = containerRef.current!;
-      if (!canvas || !video || !container) return;
+      const canvas = overlayRef.current;
+      if (!canvas) return;
 
       const ctx = canvas.getContext("2d")!;
-      
-      // Ajusta o canvas se você redimensionar a tela
-      if (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight) {
-        updateOverlaySize();
-      }
-
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = "#00ff00";
-      ctx.lineWidth = 3;
 
-      // --- AJUSTE PARA O LAYOUT NOVO (OBJECT-COVER) ---
-      // Essa é a única parte "nova". Ela calcula como o vídeo está esticado na tela.
-      const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
-      const offsetX = (canvas.width - video.videoWidth * scale) / 2;
-      const offsetY = (canvas.height - video.videoHeight * scale) / 2;
+      ctx.strokeStyle = "#00ff00";
+      ctx.lineWidth = 4; // Aumentei um pouco para ficar mais visível no dashboard
 
       const smoothed = targetPolygons.current.map((poly, i) =>
         lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current)
@@ -99,9 +84,13 @@ export default function CameraView() {
       smoothed.forEach(polygon => {
         ctx.beginPath();
         polygon.forEach((p, i) => {
-          // Lógica original multiplicada pela escala e somada ao offset do layout
-          const x = p.x * (video.videoWidth * scale) + offsetX;
-          const y = p.y * (video.videoHeight * scale) + offsetY;
+          /**
+           * LÓGICA DO CÓDIGO ANTIGO:
+           * Como o Canvas tem a mesma resolução do vídeo, multiplicamos direto.
+           * O CSS "object-cover" vai cuidar de alinhar os dois na tela.
+           */
+          const x = p.x * canvas.width;
+          const y = p.y * canvas.height;
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         });
         ctx.closePath();
@@ -113,11 +102,11 @@ export default function CameraView() {
     }
 
     async function detectOnce() {
-      if (busy.current) return;
+      if (busy.current || !videoRef.current || !captureRef.current) return;
       busy.current = true;
 
-      const video = videoRef.current!;
-      const canvas = captureRef.current!;
+      const video = videoRef.current;
+      const canvas = captureRef.current;
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
@@ -132,36 +121,40 @@ export default function CameraView() {
           });
           const data = await res.json();
           const polygons = data.polygons ?? [];
+
           prevPolygons.current = targetPolygons.current.length ? targetPolygons.current : polygons;
           targetPolygons.current = polygons;
           alpha.current = 0;
-        } catch (err) { console.error(err); } 
-        finally { busy.current = false; }
-      }, "image/jpeg", 0.6);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          busy.current = false;
+        }
+      }, "image/jpeg", 0.7);
     }
 
     function startDetectionLoop() {
-      detectionTimer = setInterval(detectOnce, 1000);
+      detectionTimer = setInterval(detectOnce, 1500);
     }
 
     startCamera();
-    window.addEventListener("resize", updateOverlaySize);
 
     return () => {
       clearInterval(detectionTimer);
       cancelAnimationFrame(rafId);
-      window.removeEventListener("resize", updateOverlaySize);
     };
   }, []);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden rounded-xl border-2 border-primary/20">
-      {/* VÍDEO E CANVAS ESPELHADOS ( scale-x-[-1] )
-          Isso resolve o problema das suas prints onde você estava de um lado e o contorno do outro.
+    <div className="relative w-full h-full bg-black overflow-hidden rounded-xl border border-white/10">
+      {/* A MÁGICA: 
+          Ambos possuem 'object-cover'. Como o canvas tem a mesma largura/altura 
+          interna do vídeo, o navegador vai esticar e cortar os dois exatamente 
+          da mesma forma. 
       */}
       <video
         ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+        className="absolute inset-0 w-full h-full object-cover"
         muted
         playsInline
         autoPlay
@@ -169,7 +162,7 @@ export default function CameraView() {
 
       <canvas
         ref={overlayRef}
-        className="absolute inset-0 w-full h-full pointer-events-none z-10 scale-x-[-1]"
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
       />
 
       <canvas ref={captureRef} className="hidden" />
