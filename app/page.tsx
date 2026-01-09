@@ -44,7 +44,7 @@ export default function Home() {
 
           {/* Área da Câmera - Direita */}
           <div className="lg:col-span-2">
-            <div className="rounded-xl overflow-hidden border-4 border-yellow-500 shadow-xl bg-black flex items-center justify-center">
+            <div className="rounded-xl overflow-hidden border-4 border-yellow-500 shadow-xl aspect-[4/3] max-w-[640px] mx-auto">
               <CameraView />
             </div>
 
