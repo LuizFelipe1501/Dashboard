@@ -87,7 +87,7 @@ export default function CameraView() {
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
-      // Atualiza tamanho do canvas se o container mudou (resize)
+      // Atualiza tamanho do canvas se necessário
       if (canvas.width !== containerRef.current?.clientWidth || canvas.height !== containerRef.current?.clientHeight) {
         updateOverlaySize()
       }
@@ -96,7 +96,7 @@ export default function CameraView() {
       ctx.strokeStyle = "#00ff00"
       ctx.lineWidth = 3
 
-      // Cálculo de escala e offset para alinhar polígonos com o vídeo exibido
+      // Cálculo de escala e offset (corrigido)
       const videoRatio = video.videoWidth / video.videoHeight
       const canvasRatio = canvas.width / canvas.height
 
@@ -105,12 +105,12 @@ export default function CameraView() {
       let offsetY = 0
 
       if (canvasRatio > videoRatio) {
-        // Container mais largo → vídeo preenche altura, corta largura
+        // Container mais largo → preenche altura, corta largura (letterbox)
         scale = canvas.height / video.videoHeight
         const scaledWidth = video.videoWidth * scale
         offsetX = (canvas.width - scaledWidth) / 2
       } else {
-        // Container mais alto → vídeo preenche largura, corta altura
+        // Container mais alto → preenche largura, corta altura (pillarbox)
         scale = canvas.width / video.videoWidth
         const scaledHeight = video.videoHeight * scale
         offsetY = (canvas.height - scaledHeight) / 2
@@ -123,8 +123,9 @@ export default function CameraView() {
       smoothed.forEach(polygon => {
         ctx.beginPath()
         polygon.forEach((p, i) => {
+          // Inverte Y (corrige orientação comum do backend)
           const x = p.x * video.videoWidth * scale + offsetX
-          const y = p.y * video.videoHeight * scale + offsetY
+          const y = (1 - p.y) * video.videoHeight * scale + offsetY  // ← ESSA LINHA CORRIGE O DESALINHAMENTO VERTICAL
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
         })
         ctx.closePath()
@@ -133,7 +134,7 @@ export default function CameraView() {
 
       alpha.current = Math.min(alpha.current + 0.08, 1)
       rafId = requestAnimationFrame(animate)
-    }
+    }      
 
     async function detectOnce() {
       if (busy.current || !videoRef.current || !captureRef.current) return
