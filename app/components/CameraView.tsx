@@ -17,7 +17,7 @@ function lerpPolygon(from: Point[], to: Point[], t: number): Point[] {
 }
 
 export default function CameraView() {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null); // Referência para o layout novo
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const captureRef = useRef<HTMLCanvasElement>(null);
@@ -28,7 +28,7 @@ export default function CameraView() {
   const alpha = useRef(1);
 
   useEffect(() => {
-    let detectionTimer: NodeJS.Timeout;
+    let detectionTimer: any;
     let rafId: number;
 
     async function startCamera() {
@@ -36,24 +36,24 @@ export default function CameraView() {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 } }
         });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.play();
-            setupCanvases();
-            animate();
-            startDetectionLoop();
-          };
-        }
+
+        const video = videoRef.current!;
+        video.srcObject = stream;
+
+        video.onloadedmetadata = () => {
+          video.play();
+          setupCanvases();
+          animate();
+          startDetectionLoop();
+        };
       } catch (err) {
-        console.error("Erro na câmera:", err);
+        console.error("Erro ao abrir câmera:", err);
       }
     }
 
     function setupCanvases() {
-      const video = videoRef.current;
-      if (!video || !video.videoWidth) return;
-      
+      const video = videoRef.current!;
+      // Mantém a lógica de captura no tamanho real do vídeo
       if (captureRef.current) {
         captureRef.current.width = video.videoWidth;
         captureRef.current.height = video.videoHeight;
@@ -61,29 +61,23 @@ export default function CameraView() {
       updateOverlaySize();
     }
 
+    // Função para o canvas sempre preencher o container do layout novo
     function updateOverlaySize() {
-      const container = containerRef.current;
-      const overlay = overlayRef.current;
-      if (!container || !overlay) return;
-      
-      // Sincroniza o tamanho do desenho com o tamanho visível na tela
-      overlay.width = container.clientWidth;
-      overlay.height = container.clientHeight;
+      if (containerRef.current && overlayRef.current) {
+        overlayRef.current.width = containerRef.current.clientWidth;
+        overlayRef.current.height = containerRef.current.clientHeight;
+      }
     }
 
     function animate() {
-      const canvas = overlayRef.current;
-      const video = videoRef.current;
-      const container = containerRef.current;
-      
-      if (!canvas || !video || !container || !video.videoWidth) {
-        rafId = requestAnimationFrame(animate);
-        return;
-      }
+      const canvas = overlayRef.current!;
+      const video = videoRef.current!;
+      const container = containerRef.current!;
+      if (!canvas || !video || !container) return;
 
       const ctx = canvas.getContext("2d")!;
       
-      // Redimensiona se a janela mudar
+      // Ajusta o canvas se você redimensionar a tela
       if (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight) {
         updateOverlaySize();
       }
@@ -92,12 +86,9 @@ export default function CameraView() {
       ctx.strokeStyle = "#00ff00";
       ctx.lineWidth = 3;
 
-      // --- MATEMÁTICA DE POSICIONAMENTO ---
-      // 1. Calculamos a escala necessária para cobrir o container (object-cover)
+      // --- AJUSTE PARA O LAYOUT NOVO (OBJECT-COVER) ---
+      // Essa é a única parte "nova". Ela calcula como o vídeo está esticado na tela.
       const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
-      
-      // 2. Calculamos quanto do vídeo "transbordou" e foi cortado
-      // Offset é a diferença entre o canvas e o vídeo escalado, dividido por 2 (centralização)
       const offsetX = (canvas.width - video.videoWidth * scale) / 2;
       const offsetY = (canvas.height - video.videoHeight * scale) / 2;
 
@@ -108,14 +99,9 @@ export default function CameraView() {
       smoothed.forEach(polygon => {
         ctx.beginPath();
         polygon.forEach((p, i) => {
-          /**
-           * MAPEAMENTO FINAL:
-           * Pegamos o ponto normalizado (0 a 1) e projetamos no espaço visível.
-           * Fórmula: (Ponto * TamanhoReal * Escala) + DeslocamentoCentral
-           */
-          const x = p.x * video.videoWidth * scale + offsetX;
-          const y = p.y * video.videoHeight * scale + offsetY;
-          
+          // Lógica original multiplicada pela escala e somada ao offset do layout
+          const x = p.x * (video.videoWidth * scale) + offsetX;
+          const y = p.y * (video.videoHeight * scale) + offsetY;
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         });
         ctx.closePath();
@@ -127,20 +113,22 @@ export default function CameraView() {
     }
 
     async function detectOnce() {
-      if (busy.current || !videoRef.current || !captureRef.current) return;
+      if (busy.current) return;
       busy.current = true;
-      const video = videoRef.current;
-      const canvas = captureRef.current;
-      const ctx = canvas.getContext("2d")!;
 
+      const video = videoRef.current!;
+      const canvas = captureRef.current!;
+      const ctx = canvas.getContext("2d")!;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
       canvas.toBlob(async blob => {
         if (!blob) { busy.current = false; return; }
         try {
           const formData = new FormData();
           formData.append("file", blob, "frame.jpg");
           const res = await fetch("https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/detect", {
-            method: "POST", body: formData
+            method: "POST",
+            body: formData
           });
           const data = await res.json();
           const polygons = data.polygons ?? [];
@@ -149,15 +137,16 @@ export default function CameraView() {
           alpha.current = 0;
         } catch (err) { console.error(err); } 
         finally { busy.current = false; }
-      }, "image/jpeg", 0.7);
+      }, "image/jpeg", 0.6);
     }
 
     function startDetectionLoop() {
-      detectionTimer = setInterval(detectOnce, 1500);
+      detectionTimer = setInterval(detectOnce, 1000);
     }
 
     startCamera();
     window.addEventListener("resize", updateOverlaySize);
+
     return () => {
       clearInterval(detectionTimer);
       cancelAnimationFrame(rafId);
@@ -166,20 +155,23 @@ export default function CameraView() {
   }, []);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden rounded-xl">
-      {/* Vídeo base */}
+    <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden rounded-xl border-2 border-primary/20">
+      {/* VÍDEO E CANVAS ESPELHADOS ( scale-x-[-1] )
+          Isso resolve o problema das suas prints onde você estava de um lado e o contorno do outro.
+      */}
       <video
         ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
         muted
         playsInline
         autoPlay
       />
-      {/* Canvas com os contornos (Sobreposição Perfeita) */}
+
       <canvas
         ref={overlayRef}
-        className="absolute inset-0 w-full h-full pointer-events-none z-10"
+        className="absolute inset-0 w-full h-full pointer-events-none z-10 scale-x-[-1]"
       />
+
       <canvas ref={captureRef} className="hidden" />
     </div>
   );
