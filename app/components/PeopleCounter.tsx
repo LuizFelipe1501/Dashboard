@@ -35,19 +35,17 @@ export default function PeopleCounter({ demo = null }: Props) {
     return () => clearInterval(interval);
   }, [demo]);
 
-  return (
-    <HudPanel>
-      <h2 className="text-xs text-green-400 uppercase tracking-widest">
+return (
+    <div className="bg-purple-900/60 border-2 border-yellow-400 rounded-2xl p-6 text-center shadow-md">
+      <h2 className="text-base uppercase font-semibold text-yellow-300 tracking-wide">
         People Detected
       </h2>
-
-      <p className="mt-4 text-5xl font-bold text-green-400">
-        {count}
+      <p className="mt-3 text-5xl font-bold text-yellow-300">
+        {demo ?? 0}
       </p>
-
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-sm text-purple-300">
         Camera-based detection
       </p>
-    </HudPanel>
+    </div>
   );
 }

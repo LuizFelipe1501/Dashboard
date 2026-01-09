@@ -141,58 +141,51 @@ export default function VoiceAssistant({
   }
 
   return (
-    <div className="hud-panel flex items-center gap-4 w-full max-w-xl">
+    <div className="bg-purple-900/70 border-2 border-yellow-400 rounded-3xl p-6 w-full shadow-lg">
+      <div className="flex items-center gap-6 flex-col sm:flex-row">
+        {/* Avatar */}
+        <div className="relative shrink-0">
+          <img
+            src="/lumi.png"
+            alt="Lumi"
+            className={`
+              w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-yellow-300
+              transition-all duration-300
+              ${status === "listening" ? "ring-4 ring-purple-400 animate-pulse scale-110" : ""}
+              ${status === "speaking" ? "ring-4 ring-green-400 scale-105" : ""}
+            `}
+          />
+          <div className="absolute inset-0 rounded-full blur-xl bg-purple-500/30 -z-10" />
+        </div>
 
-    {/* AVATAR */}
-    <div className="relative shrink-0">
-      <img
-        src="/lumi.png"
-        alt="Lumi"
-        className={`
-          w-16 h-16 rounded-full border border-white/20
-          transition
-          ${status === "listening" ? "ring-2 ring-purple-400 animate-pulse" : ""}
-          ${status === "speaking" ? "ring-2 ring-green-400" : ""}
-        `}
-      />
-      <div className="absolute inset-0 rounded-full blur-xl bg-purple-500/20 -z-10" />
-    </div>
+        {/* Texto + Status + Botão */}
+        <div className="flex-1 text-center sm:text-left">
+          <h2 className="text-2xl font-bold text-yellow-300">
+            Lumi Voice Assistant
+          </h2>
 
-    {/* TEXTO + BOTÃO */}
-    <div className="flex-1">
-      <h2 className="text-sm font-semibold text-purple-300">
-        Lumi Voice Assistant
-      </h2>
+          <p className="text-lg text-purple-200 mt-2">
+            {status === "idle" && "Press the button and speak naturally"}
+            {status === "listening" && "Listening…"}
+            {status === "thinking" && "Processing your request…"}
+            {status === "speaking" && "Responding with real context"}
+          </p>
 
-      <p className="text-xs text-zinc-400 mt-1">
-        {status === "idle" && "Press the button and speak naturally"}
-        {status === "listening" && "Listening…"}
-        {status === "thinking" && "Processing your request…"}
-        {status === "speaking" && "Responding with real context"}
-      </p>
-
-      <button
-        onClick={startListening}
-        disabled={status !== "idle"}
-        className="
-          mt-3
-          w-full
-          rounded-md
-          bg-purple-600/20
-          border border-purple-400/30
-          py-2
-          text-sm
-          text-purple-200
-          hover:bg-purple-600/30
-          transition
-          disabled:opacity-60
-          disabled:cursor-not-allowed
-        "
-      >
-        🎙 Ask Lumi
-      </button>
-    </div>
-
+          <button
+            onClick={startListening}
+            disabled={status !== "idle"}
+            className="
+              mt-4 px-8 py-3 bg-purple-600 hover:bg-purple-500
+              text-white font-bold rounded-full text-lg
+              border-2 border-yellow-300 shadow-lg
+              transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed
+              flex items-center gap-3 mx-auto sm:mx-0
+            "
+          >
+            <span className="text-2xl">🎤</span> Ask Lumi
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
