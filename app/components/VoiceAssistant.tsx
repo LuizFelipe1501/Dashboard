@@ -141,31 +141,58 @@ export default function VoiceAssistant({
   }
 
   return (
-    <button
-      onClick={startListening}
-      disabled={status !== "idle"}
-      className="
-        w-full
-        rounded-full
-        bg-[#c9a7f5]
-        border-2
-        border-yellow-300
-        px-6
-        py-4
-        text-lg
-        font-bold
-        text-black
-        shadow-lg
-        transition
-        hover:scale-[1.02]
-        disabled:opacity-60
-        disabled:cursor-not-allowed
-      "
-    >
-      {status === "idle" && "Ask Lumi"}
-      {status === "listening" && "Listening…"}
-      {status === "thinking" && "Thinking…"}
-      {status === "speaking" && "Speaking…"}
-    </button>
+    <div className="hud-panel flex items-center gap-4 w-full max-w-xl">
+
+    {/* AVATAR */}
+    <div className="relative shrink-0">
+      <img
+        src="/lumi.png"
+        alt="Lumi"
+        className={`
+          w-16 h-16 rounded-full border border-white/20
+          transition
+          ${status === "listening" ? "ring-2 ring-purple-400 animate-pulse" : ""}
+          ${status === "speaking" ? "ring-2 ring-green-400" : ""}
+        `}
+      />
+      <div className="absolute inset-0 rounded-full blur-xl bg-purple-500/20 -z-10" />
+    </div>
+
+    {/* TEXTO + BOTÃO */}
+    <div className="flex-1">
+      <h2 className="text-sm font-semibold text-purple-300">
+        Lumi Voice Assistant
+      </h2>
+
+      <p className="text-xs text-zinc-400 mt-1">
+        {status === "idle" && "Press the button and speak naturally"}
+        {status === "listening" && "Listening…"}
+        {status === "thinking" && "Processing your request…"}
+        {status === "speaking" && "Responding with real context"}
+      </p>
+
+      <button
+        onClick={startListening}
+        disabled={status !== "idle"}
+        className="
+          mt-3
+          w-full
+          rounded-md
+          bg-purple-600/20
+          border border-purple-400/30
+          py-2
+          text-sm
+          text-purple-200
+          hover:bg-purple-600/30
+          transition
+          disabled:opacity-60
+          disabled:cursor-not-allowed
+        "
+      >
+        🎙 Ask Lumi
+      </button>
+    </div>
+
+    </div>
   );
 }

@@ -6,7 +6,6 @@ import PeopleCounter from "./components/PeopleCounter";
 import SceneStatus from "./components/SceneStatus";
 import VoiceAssistant from "./components/VoiceAssistant";
 import InstructionBox from "./components/InstructionBox";
-import LumiAvatar from "./components/LumiAvatar"; // 👈 IMPORTA AQUI
 
 const BACKEND_URL =
   "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io";
@@ -40,9 +39,8 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
         
         {/* COLUNA ESQUERDA */}
-        <div className="flex flex-col gap-4 items-start">
+        <div className="flex flex-col gap-4 w-full max-w-[260px]">
           <InstructionBox />
-          <LumiAvatar /> {/* 👈 AQUI */}
         </div>
 
         {/* COLUNA DIREITA (2x mais larga) */}
