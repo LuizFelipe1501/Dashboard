@@ -1,146 +1,135 @@
-"use client";
+"use client"
 
-import { useRef, useState } from "react";
+import { useRef, useState } from "react"
 
 type Props = {
-  peopleDetected: number;
-  sceneState: string;
-};
+  peopleDetected: number
+  sceneState: string
+}
 
-const WAKE_WORD = "lumi";
+const WAKE_WORD = "lumi"
 
-export default function VoiceAssistant({
-  peopleDetected,
-  sceneState,
-}: Props) {
-  const recognitionRef = useRef<any>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const busyRef = useRef(false);
-  const handledRef = useRef(false);
+export default function VoiceAssistant({ peopleDetected, sceneState }: Props) {
+  const recognitionRef = useRef<any>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const busyRef = useRef(false)
+  const handledRef = useRef(false)
 
-  const [status, setStatus] = useState<
-    "idle" | "listening" | "thinking" | "speaking"
-  >("idle");
+  const [status, setStatus] = useState<"idle" | "listening" | "thinking" | "speaking">("idle")
 
   async function sendToVoiceAPI(text: string): Promise<Blob> {
-    const res = await fetch(
-      "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/voice",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "audio/mpeg",
-        },
-        body: JSON.stringify({
-          text,
-          people_detected: peopleDetected,
-          scene_state: sceneState,
-        }),
-      }
-    );
+    const res = await fetch("https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/voice", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "audio/mpeg",
+      },
+      body: JSON.stringify({
+        text,
+        people_detected: peopleDetected,
+        scene_state: sceneState,
+      }),
+    })
 
     if (!res.ok) {
-      throw new Error(`Voice API failed: ${res.status}`);
+      throw new Error(`Voice API failed: ${res.status}`)
     }
 
-    return await res.blob();
+    return await res.blob()
   }
 
   function startListening() {
-    if (busyRef.current) return;
+    if (busyRef.current) return
 
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
 
     if (!SpeechRecognition) {
-      alert("Speech Recognition not supported");
-      return;
+      alert("Speech Recognition not supported")
+      return
     }
 
-    busyRef.current = true;
-    handledRef.current = false;
+    busyRef.current = true
+    handledRef.current = false
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    const recognition = new SpeechRecognition()
+    recognition.lang = "en-US"
+    recognition.continuous = false
+    recognition.interimResults = false
 
     recognition.onresult = async (e: any) => {
-      if (handledRef.current) return;
-      handledRef.current = true;
+      if (handledRef.current) return
+      handledRef.current = true
 
-      const transcriptRaw =
-        e.results?.[0]?.[0]?.transcript?.trim().toLowerCase();
+      const transcriptRaw = e.results?.[0]?.[0]?.transcript?.trim().toLowerCase()
 
       if (!transcriptRaw || transcriptRaw === WAKE_WORD) {
-        reset();
-        return;
+        reset()
+        return
       }
 
       const transcript = transcriptRaw.startsWith(WAKE_WORD)
         ? transcriptRaw.replace(WAKE_WORD, "").trim()
-        : transcriptRaw;
+        : transcriptRaw
 
       if (!transcript) {
-        reset();
-        return;
+        reset()
+        return
       }
 
-      recognition.stop();
-      setStatus("thinking");
+      recognition.stop()
+      setStatus("thinking")
 
       try {
-        const audioBlob = await sendToVoiceAPI(transcript);
-        playAudio(audioBlob);
+        const audioBlob = await sendToVoiceAPI(transcript)
+        playAudio(audioBlob)
       } catch {
-        reset();
+        reset()
       }
-    };
+    }
 
     recognition.onerror = () => {
-      recognition.stop();
-      reset();
-    };
+      recognition.stop()
+      reset()
+    }
 
-    recognitionRef.current = recognition;
-    setStatus("listening");
-    recognition.start();
+    recognitionRef.current = recognition
+    setStatus("listening")
+    recognition.start()
   }
 
   function playAudio(blob: Blob) {
-    setStatus("speaking");
+    setStatus("speaking")
 
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-      audioRef.current = null;
+      audioRef.current.pause()
+      audioRef.current.src = ""
+      audioRef.current = null
     }
 
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audioRef.current = audio;
+    const url = URL.createObjectURL(blob)
+    const audio = new Audio(url)
+    audioRef.current = audio
 
     audio.onended = () => {
-      URL.revokeObjectURL(url);
-      reset();
-    };
+      URL.revokeObjectURL(url)
+      reset()
+    }
 
     audio.onerror = () => {
-      URL.revokeObjectURL(url);
-      reset();
-    };
+      URL.revokeObjectURL(url)
+      reset()
+    }
 
-    audio.play().catch(reset);
+    audio.play().catch(reset)
   }
 
   function reset() {
-    busyRef.current = false;
-    handledRef.current = false;
-    setStatus("idle");
+    busyRef.current = false
+    handledRef.current = false
+    setStatus("idle")
   }
 
- return (
+  return (
     <div className="text-center sm:text-left">
       <div className="flex items-center gap-4 flex-col sm:flex-row justify-center sm:justify-start">
         {/* Avatar menor */}
