@@ -50,10 +50,13 @@ export default function CameraView() {
 
     function setupCanvases() {
       const video = videoRef.current!;
-      overlayRef.current!.width = video.videoWidth;
-      overlayRef.current!.height = video.videoHeight;
-      captureRef.current!.width = video.videoWidth;
-      captureRef.current!.height = video.videoHeight;
+      if (!video.videoWidth || !video.videoHeight) return;
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      overlayRef.current!.width = w;
+      overlayRef.current!.height = h;
+      captureRef.current!.width = w;
+      captureRef.current!.height = h;
     }
 
     function animate() {
@@ -147,21 +150,21 @@ export default function CameraView() {
   }, []);
 
   return (
-    <div className="relative w-[640px] h-[480px] bg-black">
-      <video
-        ref={videoRef}
-        className="absolute top-0 left-0 w-full h-full object-cover rounded-xl"
-        muted
-        playsInline
-        autoPlay
-      />
+  <div className="relative w-full h-full bg-black">
+    <video
+      ref={videoRef}
+      className="absolute top-0 left-0 w-full h-full object-cover"
+      muted
+      playsInline
+      autoPlay
+    />
 
-      <canvas
-        ref={overlayRef}
-        className="absolute top-0 left-0 w-full h-full pointer-events-none"
-      />
+    <canvas
+      ref={overlayRef}
+      className="absolute top-0 left-0 w-full h-full pointer-events-none"
+    />
 
-      <canvas ref={captureRef} className="hidden" />
-    </div>
-  );
+    <canvas ref={captureRef} className="hidden" />
+  </div>
+);
 }

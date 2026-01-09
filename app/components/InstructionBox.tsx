@@ -1,6 +1,6 @@
 export default function InstructionBox() {
   return (
-    <div className="hud-panel max-w-sm text-sm text-neutral-200">
+    <div className="hud-panel text-sm text-neutral-200">
       {/* HUD corners */}
       <span className="hud-corner top-left" />
       <span className="hud-corner top-right" />
