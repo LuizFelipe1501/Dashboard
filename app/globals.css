@@ -29,7 +29,18 @@ body {
   line-height: 1.5;
 }
 
-/* Removi .hud-panel completamente - use classes diretas nos componentes */
-.hud-panel, .hud-corner {
-  display: none !important; /* força remoção se ainda estiver em cache */
+/* Classes úteis para o mockup */
+.neon-border {
+  border: 4px solid transparent;
+  background: linear-gradient(to right, #ffeb3b, #ff4081, #7c4dff) border-box;
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
 }
