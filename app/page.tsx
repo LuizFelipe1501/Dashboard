@@ -6,7 +6,6 @@ import PeopleCounter from "./components/PeopleCounter"
 import SceneStatus from "./components/SceneStatus"
 import VoiceAssistant from "./components/VoiceAssistant"
 import InstructionBox from "./components/InstructionBox"
-import { Camera } from "lucide-react"
 
 export default function Home() {
   const [peopleDetected, setPeopleDetected] = useState(0)
@@ -46,15 +45,8 @@ export default function Home() {
           {/* Área da Câmera - Direita */}
           <div className="lg:col-span-2">
             <div className="rounded-xl overflow-hidden border-4 border-yellow-500 shadow-xl">
-              <div className="bg-purple-800 aspect-video flex items-center justify-center">
-                {peopleDetected === 0 ? (
-                  <div className="text-center text-white/60">
-                    <Camera className="w-12 h-12 mx-auto mb-2" />
-                    <p className="text-sm">Camera feed would appear here</p>
-                  </div>
-                ) : (
-                  <CameraView />
-                )}
+              <div className="bg-purple-800 aspect-video">
+                <CameraView />
               </div>
             </div>
 
