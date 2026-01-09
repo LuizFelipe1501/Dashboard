@@ -44,10 +44,8 @@ export default function Home() {
 
           {/* Área da Câmera - Direita */}
           <div className="lg:col-span-2">
-            <div className="rounded-xl overflow-hidden border-4 border-yellow-500 shadow-xl">
-              <div className="bg-purple-800 aspect-video">
-                <CameraView />
-              </div>
+            <div className="rounded-xl overflow-hidden border-4 border-yellow-500 shadow-xl bg-black flex items-center justify-center">
+              <CameraView />
             </div>
 
             {/* Status Cards */}
