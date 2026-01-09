@@ -64,3 +64,11 @@ body {
   border-left: none;
   border-top: none;
 }
+html, body, #__next {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}

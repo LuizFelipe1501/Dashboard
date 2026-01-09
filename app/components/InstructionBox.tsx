@@ -1,11 +1,11 @@
 export default function InstructionBox() {
   return (
-    <div className="bg-purple-900/70 border-4 border-yellow-400 rounded-3xl p-8 shadow-lg text-purple-100">
-      <h2 className="text-3xl font-bold mb-6 text-yellow-300 tracking-wide">
+    <div className="bg-purple-900/70 border-4 border-yellow-400 rounded-3xl p-5 sm:p-8">
+      <h2 className="text-2xl sm:text-3xl font-bold mb-5 text-yellow-300">
         How to Use the Demo
       </h2>
 
-      <ol className="space-y-4 list-decimal pl-6 text-lg">
+      <ol className="sspace-y-3 text-base sm:text-lg">
         <li>Allow camera and microphone access.</li>
         <li>Click the <span className="text-yellow-300 font-medium">"Ask Lumi"</span> button.</li>
         <li>

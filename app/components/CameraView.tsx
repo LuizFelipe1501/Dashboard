@@ -22,63 +22,54 @@ export default function CameraView() {
   const captureRef = useRef<HTMLCanvasElement>(null);
 
   const busy = useRef(false);
+
+  // 🔥 estados para suavização
   const prevPolygons = useRef<Point[][]>([]);
   const targetPolygons = useRef<Point[][]>([]);
   const alpha = useRef(1);
 
   useEffect(() => {
-    let detectionTimer: NodeJS.Timeout | undefined;
+    let detectionTimer: any;
     let rafId: number;
 
     async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 } } // Melhor qualidade, mas responsivo
-        });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480 }
+      });
 
-        const video = videoRef.current!;
-        video.srcObject = stream;
+      const video = videoRef.current!;
+      video.srcObject = stream;
 
-        video.onloadedmetadata = () => {
-          video.play();
-          setupCanvases();
-          animate();
-          startDetectionLoop();
-        };
-      } catch (err) {
-        console.error("Erro ao acessar câmera:", err);
-      }
+      video.onloadedmetadata = () => {
+        video.play();
+        setupCanvases();
+        animate();
+        startDetectionLoop();
+      };
     }
 
     function setupCanvases() {
       const video = videoRef.current!;
-      if (!video.videoWidth || !video.videoHeight) return;
-
-      const w = video.videoWidth;
-      const h = video.videoHeight;
-
-      if (overlayRef.current) {
-        overlayRef.current.width = w;
-        overlayRef.current.height = h;
-      }
-      if (captureRef.current) {
-        captureRef.current.width = w;
-        captureRef.current.height = h;
-      }
+      overlayRef.current!.width = video.videoWidth;
+      overlayRef.current!.height = video.videoHeight;
+      captureRef.current!.width = video.videoWidth;
+      captureRef.current!.height = video.videoHeight;
     }
 
     function animate() {
-      if (!overlayRef.current) return;
-      const canvas = overlayRef.current;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
+      const canvas = overlayRef.current!;
+      const ctx = canvas.getContext("2d")!;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       ctx.strokeStyle = "#00ff00";
       ctx.lineWidth = 3;
 
       const smoothed = targetPolygons.current.map((poly, i) =>
-        lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current)
+        lerpPolygon(
+          prevPolygons.current[i] ?? poly,
+          poly,
+          alpha.current
+        )
       );
 
       smoothed.forEach(polygon => {
@@ -97,78 +88,80 @@ export default function CameraView() {
     }
 
     async function detectOnce() {
-      if (busy.current || !captureRef.current || !videoRef.current) return;
+      if (busy.current) return;
       busy.current = true;
 
-      const video = videoRef.current;
-      const canvas = captureRef.current;
-      const ctx = canvas.getContext("2d");
+      const video = videoRef.current!;
+      const canvas = captureRef.current!;
+      const ctx = canvas.getContext("2d")!;
 
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        canvas.toBlob(async (blob) => {
-          if (!blob) {
-            busy.current = false;
-            return;
-          }
+      canvas.toBlob(async blob => {
+        if (!blob) {
+          busy.current = false;
+          return;
+        }
 
-          try {
-            const formData = new FormData();
-            formData.append("file", blob, "frame.jpg");
+        try {
+          const formData = new FormData();
+          formData.append("file", blob, "frame.jpg");
 
-            const res = await fetch(
-              "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/detect",
-              { method: "POST", body: formData }
-            );
+          const res = await fetch(
+            "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/detect",
+            {
+              method: "POST",
+              body: formData
+            }
+          );
 
-            const data = await res.json();
-            const polygons = data.polygons ?? [];
+          const data = await res.json();
+          const polygons = data.polygons ?? [];
 
-            prevPolygons.current = targetPolygons.current.length
-              ? targetPolygons.current
-              : polygons;
+          // 🔥 atualiza alvos para interpolação
+          prevPolygons.current = targetPolygons.current.length
+            ? targetPolygons.current
+            : polygons;
 
-            targetPolygons.current = polygons;
-            alpha.current = 0;
-          } catch (err) {
-            console.error("Erro na detecção:", err);
-          } finally {
-            busy.current = false;
-          }
-        }, "image/jpeg", 0.7);
-      }
+          targetPolygons.current = polygons;
+          alpha.current = 0;
+
+        } catch (err) {
+          console.error(err);
+        } finally {
+          busy.current = false;
+        }
+      }, "image/jpeg", 0.6);
     }
 
     function startDetectionLoop() {
-      detectionTimer = setInterval(detectOnce, 1500); // 1 a cada ~1.5s para não sobrecarregar
+      detectionTimer = setInterval(detectOnce, 1000); // 1 FPS
     }
 
     startCamera();
 
     return () => {
-      if (detectionTimer) clearInterval(detectionTimer);
+      clearInterval(detectionTimer);
       cancelAnimationFrame(rafId);
-      if (videoRef.current?.srcObject) {
-        (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
-      }
     };
   }, []);
 
   return (
-    <div className="relative w-full h-full bg-black">
-      <video
-        ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover rounded-3xl"
-        muted
-        playsInline
-        autoPlay
-      />
-      <canvas
-        ref={overlayRef}
-        className="absolute inset-0 w-full h-full pointer-events-none"
-      />
-      <canvas ref={captureRef} className="hidden" />
-    </div>
-  );
+  <div className="relative w-full h-full bg-black">
+    <video
+      ref={videoRef}
+      className="absolute inset-0 w-full h-full object-cover"
+      muted
+      playsInline
+      autoPlay
+    />
+
+    <canvas
+      ref={overlayRef}
+      className="absolute inset-0 w-full h-full pointer-events-none"
+    />
+
+    <canvas ref={captureRef} className="hidden" />
+  </div>
+);
 }
