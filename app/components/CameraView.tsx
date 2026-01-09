@@ -46,7 +46,7 @@ export default function CameraView() {
           };
         }
       } catch (err) {
-        console.error("Erro ao acessar câmera:", err);
+        console.error("Erro na câmera:", err);
       }
     }
 
@@ -54,9 +54,7 @@ export default function CameraView() {
       const video = videoRef.current;
       if (!video) return;
 
-      /** * SEGREDO DO CÓDIGO ANTIGO: 
-       * O tamanho interno (resolução) do Canvas deve ser IGUAL ao do Vídeo.
-       */
+      // Sincroniza a resolução interna do Canvas com a do Vídeo
       if (overlayRef.current) {
         overlayRef.current.width = video.videoWidth;
         overlayRef.current.height = video.videoHeight;
@@ -74,8 +72,8 @@ export default function CameraView() {
       const ctx = canvas.getContext("2d")!;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.strokeStyle = "#00ff00";
-      ctx.lineWidth = 4; // Aumentei um pouco para ficar mais visível no dashboard
+      ctx.strokeStyle = "#00ff00"; // Verde LuminaVision
+      ctx.lineWidth = 3;
 
       const smoothed = targetPolygons.current.map((poly, i) =>
         lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current)
@@ -84,11 +82,8 @@ export default function CameraView() {
       smoothed.forEach(polygon => {
         ctx.beginPath();
         polygon.forEach((p, i) => {
-          /**
-           * LÓGICA DO CÓDIGO ANTIGO:
-           * Como o Canvas tem a mesma resolução do vídeo, multiplicamos direto.
-           * O CSS "object-cover" vai cuidar de alinhar os dois na tela.
-           */
+          // LÓGICA DO SEU CÓDIGO ANTIGO: 
+          // Multiplicamos a coordenada normalizada (0-1) pelo tamanho do canvas
           const x = p.x * canvas.width;
           const y = p.y * canvas.height;
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
@@ -121,15 +116,11 @@ export default function CameraView() {
           });
           const data = await res.json();
           const polygons = data.polygons ?? [];
-
           prevPolygons.current = targetPolygons.current.length ? targetPolygons.current : polygons;
           targetPolygons.current = polygons;
           alpha.current = 0;
-        } catch (err) {
-          console.error(err);
-        } finally {
-          busy.current = false;
-        }
+        } catch (err) { console.error(err); } 
+        finally { busy.current = false; }
       }, "image/jpeg", 0.7);
     }
 
@@ -146,12 +137,8 @@ export default function CameraView() {
   }, []);
 
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden rounded-xl border border-white/10">
-      {/* A MÁGICA: 
-          Ambos possuem 'object-cover'. Como o canvas tem a mesma largura/altura 
-          interna do vídeo, o navegador vai esticar e cortar os dois exatamente 
-          da mesma forma. 
-      */}
+    <div className="relative w-full h-full bg-black overflow-hidden rounded-xl">
+      {/* VÍDEO */}
       <video
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-cover"
@@ -160,11 +147,13 @@ export default function CameraView() {
         autoPlay
       />
 
+      {/* CANVAS: O segredo é o 'object-cover' aqui também! */}
       <canvas
         ref={overlayRef}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
       />
 
+      {/* Canvas oculto para detecção */}
       <canvas ref={captureRef} className="hidden" />
     </div>
   );
