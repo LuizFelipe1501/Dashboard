@@ -73,7 +73,7 @@ export default function CameraView() {
       }
     }
 
-    function getVideoTransform() {
+    function getVideoContainTransform() {
       const video = videoRef.current
       const container = containerRef.current
       if (!video || !container || !video.videoWidth || !video.videoHeight) {
@@ -91,25 +91,22 @@ export default function CameraView() {
       let renderW: number
       let renderH: number
 
+      // object-contain: o vídeo cabe inteiro no container, pode ter barras pretas
       if (containerRatio > videoRatio) {
-        // Container mais largo - vídeo escala pela largura, corta altura
-        renderW = containerW
-        renderH = containerW / videoRatio
-      } else {
-        // Container mais alto - vídeo escala pela altura, corta largura
+        // Container mais largo - altura do vídeo = altura do container
         renderH = containerH
         renderW = containerH * videoRatio
+      } else {
+        // Container mais alto - largura do vídeo = largura do container
+        renderW = containerW
+        renderH = containerW / videoRatio
       }
 
-      // Offset é a diferença entre o tamanho renderizado e o container, dividido por 2 (centralizado)
-      const offsetX = (renderW - containerW) / 2
-      const offsetY = (renderH - containerH) / 2
+      // Offset para centralizar (barras pretas em volta)
+      const offsetX = (containerW - renderW) / 2
+      const offsetY = (containerH - renderH) / 2
 
-      // Scale para converter coordenadas normalizadas (0-1) para pixels renderizados
-      const scaleX = renderW
-      const scaleY = renderH
-
-      return { scaleX, scaleY, offsetX, offsetY }
+      return { scaleX: renderW, scaleY: renderH, offsetX, offsetY }
     }
 
     function animate() {
@@ -129,7 +126,7 @@ export default function CameraView() {
       ctx.strokeStyle = "#00ff00"
       ctx.lineWidth = 2
 
-      const { scaleX, scaleY, offsetX, offsetY } = getVideoTransform()
+      const { scaleX, scaleY, offsetX, offsetY } = getVideoContainTransform()
 
       const smoothed = targetPolygons.current.map((poly, i) =>
         lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current),
@@ -138,9 +135,8 @@ export default function CameraView() {
       smoothed.forEach((polygon) => {
         ctx.beginPath()
         polygon.forEach((p, i) => {
-          // Coordenadas normalizadas (0-1) -> pixels na área renderizada -> menos offset
-          const x = p.x * scaleX - offsetX
-          const y = p.y * scaleY - offsetY
+          const x = p.x * scaleX + offsetX
+          const y = p.y * scaleY + offsetY
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
         })
         ctx.closePath()
@@ -215,7 +211,7 @@ export default function CameraView() {
 
   return (
     <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden">
-      <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" muted playsInline autoPlay />
+      <video ref={videoRef} className="absolute inset-0 w-full h-full object-contain" muted playsInline autoPlay />
       <canvas ref={overlayRef} className="absolute inset-0 w-full h-full pointer-events-none" />
       <canvas ref={captureRef} className="hidden" />
     </div>
