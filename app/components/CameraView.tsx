@@ -22,68 +22,54 @@ export default function CameraView() {
   const captureRef = useRef<HTMLCanvasElement>(null);
 
   const busy = useRef(false);
+
+  // 🔥 estados para suavização
   const prevPolygons = useRef<Point[][]>([]);
   const targetPolygons = useRef<Point[][]>([]);
   const alpha = useRef(1);
 
   useEffect(() => {
-    let detectionTimer: NodeJS.Timeout | undefined;
+    let detectionTimer: any;
     let rafId: number;
-    let stream: MediaStream | null = null;
 
     async function startCamera() {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 } }
-        });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480 }
+      });
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.onloadedmetadata = () => {
-            console.log("Vídeo carregado - dimensões:", videoRef.current?.videoWidth, "x", videoRef.current?.videoHeight);
-            videoRef.current?.play().catch(e => console.error("Play error:", e));
-            setupCanvases();
-            animate();
-            startDetectionLoop();
-          };
-        }
-      } catch (err) {
-        console.error("Erro ao acessar câmera:", err);
-      }
+      const video = videoRef.current!;
+      video.srcObject = stream;
+
+      video.onloadedmetadata = () => {
+        video.play();
+        setupCanvases();
+        animate();
+        startDetectionLoop();
+      };
     }
 
     function setupCanvases() {
-      const video = videoRef.current;
-      if (!video || !video.videoWidth || !video.videoHeight) {
-        setTimeout(setupCanvases, 300);
-        return;
-      }
-
-      const w = video.videoWidth;
-      const h = video.videoHeight;
-
-      if (overlayRef.current) {
-        overlayRef.current.width = w;
-        overlayRef.current.height = h;
-      }
-      if (captureRef.current) {
-        captureRef.current.width = w;
-        captureRef.current.height = h;
-      }
+      const video = videoRef.current!;
+      overlayRef.current!.width = video.videoWidth;
+      overlayRef.current!.height = video.videoHeight;
+      captureRef.current!.width = video.videoWidth;
+      captureRef.current!.height = video.videoHeight;
     }
 
     function animate() {
-      const canvas = overlayRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
+      const canvas = overlayRef.current!;
+      const ctx = canvas.getContext("2d")!;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       ctx.strokeStyle = "#00ff00";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
 
       const smoothed = targetPolygons.current.map((poly, i) =>
-        lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current)
+        lerpPolygon(
+          prevPolygons.current[i] ?? poly,
+          poly,
+          alpha.current
+        )
       );
 
       smoothed.forEach(polygon => {
@@ -102,72 +88,79 @@ export default function CameraView() {
     }
 
     async function detectOnce() {
-      if (busy.current || !videoRef.current || !captureRef.current) return;
+      if (busy.current) return;
       busy.current = true;
 
-      const video = videoRef.current;
-      const canvas = captureRef.current;
-      const ctx = canvas.getContext("2d");
+      const video = videoRef.current!;
+      const canvas = captureRef.current!;
+      const ctx = canvas.getContext("2d")!;
 
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        canvas.toBlob(async (blob) => {
-          if (!blob) {
-            busy.current = false;
-            return;
-          }
+      canvas.toBlob(async blob => {
+        if (!blob) {
+          busy.current = false;
+          return;
+        }
 
-          try {
-            const formData = new FormData();
-            formData.append("file", blob, "frame.jpg");
+        try {
+          const formData = new FormData();
+          formData.append("file", blob, "frame.jpg");
 
-            const res = await fetch(
-              "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/detect",
-              { method: "POST", body: formData }
-            );
+          const res = await fetch(
+            "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/detect",
+            {
+              method: "POST",
+              body: formData
+            }
+          );
 
-            const data = await res.json();
-            const polygons = data.polygons ?? [];
+          const data = await res.json();
+          const polygons = data.polygons ?? [];
 
-            prevPolygons.current = targetPolygons.current.length ? targetPolygons.current : polygons;
-            targetPolygons.current = polygons;
-            alpha.current = 0;
-          } catch (err) {
-            console.error("Detect error:", err);
-          } finally {
-            busy.current = false;
-          }
-        }, "image/jpeg", 0.7);
-      }
+          // 🔥 atualiza alvos para interpolação
+          prevPolygons.current = targetPolygons.current.length
+            ? targetPolygons.current
+            : polygons;
+
+          targetPolygons.current = polygons;
+          alpha.current = 0;
+
+        } catch (err) {
+          console.error(err);
+        } finally {
+          busy.current = false;
+        }
+      }, "image/jpeg", 0.6);
     }
 
     function startDetectionLoop() {
-      detectionTimer = setInterval(detectOnce, 2000);
+      detectionTimer = setInterval(detectOnce, 1000); // 1 FPS
     }
 
     startCamera();
 
     return () => {
-      if (detectionTimer) clearInterval(detectionTimer);
+      clearInterval(detectionTimer);
       cancelAnimationFrame(rafId);
-      if (stream) stream.getTracks().forEach(t => t.stop());
     };
   }, []);
 
   return (
-    <div className="relative w-full h-full bg-black">
+    <div className="relative w-[640px] h-[480px] bg-black">
       <video
         ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute top-0 left-0 w-full h-full object-cover rounded-xl"
         muted
         playsInline
         autoPlay
       />
+
       <canvas
         ref={overlayRef}
-        className="absolute inset-0 w-full h-full pointer-events-none"
+        className="absolute top-0 left-0 w-full h-full pointer-events-none"
       />
+
       <canvas ref={captureRef} className="hidden" />
     </div>
   );
