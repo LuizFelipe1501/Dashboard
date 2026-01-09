@@ -19,7 +19,6 @@ export default function Home() {
       try {
         const res = await fetch(`${BACKEND_URL}/status`);
         const data = await res.json();
-
         setPeopleDetected(data.people_detected ?? 0);
         setSceneState(data.scene_state ?? "UNKNOWN");
       } catch {}
@@ -31,18 +30,21 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col items-center gap-6 p-6">
-      <h1 className="text-2xl font-bold">
-        LuminaVision — Interactive Demo
+    <main className="min-h-screen bg-black text-white p-6">
+      <h1 className="text-2xl font-bold mb-6 text-center">
+        Hallucination Checker — Interactive Demo
       </h1>
 
-      {/* 🧱 Layout principal */}
-      <div className="flex gap-6 items-start">
-        {/* 📘 Instruções */}
-        <InstructionBox />
+      {/* GRID PRINCIPAL */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+        
+        {/* COLUNA ESQUERDA */}
+        <div className="flex flex-col gap-4">
+          <InstructionBox />
+        </div>
 
-        {/* 🎥 Câmera + status */}
-        <div className="flex flex-col items-center gap-4">
+        {/* COLUNA DIREITA (2x mais larga) */}
+        <div className="lg:col-span-2 flex flex-col gap-4">
           <CameraView />
 
           <div className="flex gap-4">
@@ -55,6 +57,7 @@ export default function Home() {
             sceneState={sceneState}
           />
         </div>
+
       </div>
     </main>
   );

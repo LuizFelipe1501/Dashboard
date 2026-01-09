@@ -147,19 +147,20 @@ export default function CameraView() {
   }, []);
 
   return (
-    <div className="relative w-[640px] h-[480px] bg-black">
-      <video
-        ref={videoRef}
-        className="absolute top-0 left-0 w-full h-full object-cover rounded-xl"
-        muted
-        playsInline
-        autoPlay
-      />
+    <div className="relative w-full max-w-3xl mx-auto aspect-video rounded-xl overflow-hidden border border-neutral-800 bg-black">
+    
+    <video
+      ref={videoRef}
+      className="absolute inset-0 w-full h-full object-cover"
+      muted
+      playsInline
+      autoPlay
+    />
 
-      <canvas
-        ref={overlayRef}
-        className="absolute top-0 left-0 w-full h-full pointer-events-none"
-      />
+    <canvas
+      ref={overlayRef}
+      className="absolute inset-0 w-full h-full pointer-events-none"
+    />
 
       <canvas ref={captureRef} className="hidden" />
     </div>

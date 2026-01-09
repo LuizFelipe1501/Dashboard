@@ -16,7 +16,7 @@ export default function VoiceAssistant({
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const busyRef = useRef(false);
-  const handledRef = useRef(false); // 🔑 evita duplicação
+  const handledRef = useRef(false);
 
   const [status, setStatus] = useState<
     "idle" | "listening" | "thinking" | "speaking"
@@ -63,7 +63,7 @@ export default function VoiceAssistant({
 
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
-    recognition.continuous = false; // ✅ MUITO IMPORTANTE
+    recognition.continuous = false;
     recognition.interimResults = false;
 
     recognition.onresult = async (e: any) => {
@@ -73,18 +73,11 @@ export default function VoiceAssistant({
       const transcriptRaw =
         e.results?.[0]?.[0]?.transcript?.trim().toLowerCase();
 
-      if (!transcriptRaw) {
+      if (!transcriptRaw || transcriptRaw === WAKE_WORD) {
         reset();
         return;
       }
 
-      // wake word sozinho → ignora
-      if (transcriptRaw === WAKE_WORD) {
-        reset();
-        return;
-      }
-
-      // remove wake word se vier junto
       const transcript = transcriptRaw.startsWith(WAKE_WORD)
         ? transcriptRaw.replace(WAKE_WORD, "").trim()
         : transcriptRaw;
@@ -100,8 +93,7 @@ export default function VoiceAssistant({
       try {
         const audioBlob = await sendToVoiceAPI(transcript);
         playAudio(audioBlob);
-      } catch (err) {
-        console.error("Voice error:", err);
+      } catch {
         reset();
       }
     };
@@ -152,12 +144,28 @@ export default function VoiceAssistant({
     <button
       onClick={startListening}
       disabled={status !== "idle"}
-      className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold disabled:opacity-50"
+      className="
+        w-full
+        rounded-full
+        bg-[#c9a7f5]
+        border-2
+        border-yellow-300
+        px-6
+        py-4
+        text-lg
+        font-bold
+        text-black
+        shadow-lg
+        transition
+        hover:scale-[1.02]
+        disabled:opacity-60
+        disabled:cursor-not-allowed
+      "
     >
-      {status === "idle" && "🎙 Ask"}
-      {status === "listening" && "👂 Listening..."}
-      {status === "thinking" && "🧠 Thinking..."}
-      {status === "speaking" && "🔊 Speaking..."}
+      {status === "idle" && "Ask Lumi"}
+      {status === "listening" && "Listening…"}
+      {status === "thinking" && "Thinking…"}
+      {status === "speaking" && "Speaking…"}
     </button>
   );
 }
