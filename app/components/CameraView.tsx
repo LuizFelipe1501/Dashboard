@@ -17,6 +17,7 @@ function lerpPolygon(from: Point[], to: Point[], t: number): Point[] {
 }
 
 export default function CameraView() {
+  const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const overlayRef = useRef<HTMLCanvasElement>(null)
   const captureRef = useRef<HTMLCanvasElement>(null)
@@ -53,33 +54,70 @@ export default function CameraView() {
 
     function setupCanvases() {
       const video = videoRef.current
-      if (!video || !video.videoWidth || !video.videoHeight) {
+      const container = containerRef.current
+      if (!video || !video.videoWidth || !video.videoHeight || !container) {
         setTimeout(setupCanvases, 300)
         return
       }
 
-      const w = video.videoWidth
-      const h = video.videoHeight
+      const containerWidth = container.clientWidth
+      const containerHeight = container.clientHeight
 
       if (overlayRef.current) {
-        overlayRef.current.width = w
-        overlayRef.current.height = h
+        overlayRef.current.width = containerWidth
+        overlayRef.current.height = containerHeight
       }
       if (captureRef.current) {
-        captureRef.current.width = w
-        captureRef.current.height = h
+        captureRef.current.width = video.videoWidth
+        captureRef.current.height = video.videoHeight
       }
+    }
+
+    function getVideoCoverOffset() {
+      const video = videoRef.current
+      const container = containerRef.current
+      if (!video || !container) return { offsetX: 0, offsetY: 0, scale: 1 }
+
+      const videoRatio = video.videoWidth / video.videoHeight
+      const containerRatio = container.clientWidth / container.clientHeight
+
+      let scale: number
+      let offsetX = 0
+      let offsetY = 0
+
+      if (containerRatio > videoRatio) {
+        // Container é mais largo - vídeo é cortado em cima/baixo
+        scale = container.clientWidth / video.videoWidth
+        const scaledHeight = video.videoHeight * scale
+        offsetY = (scaledHeight - container.clientHeight) / 2
+      } else {
+        // Container é mais alto - vídeo é cortado nas laterais
+        scale = container.clientHeight / video.videoHeight
+        const scaledWidth = video.videoWidth * scale
+        offsetX = (scaledWidth - container.clientWidth) / 2
+      }
+
+      return { offsetX, offsetY, scale }
     }
 
     function animate() {
       const canvas = overlayRef.current
-      if (!canvas) return
+      const video = videoRef.current
+      const container = containerRef.current
+      if (!canvas || !video || !container) return
       const ctx = canvas.getContext("2d")
       if (!ctx) return
+
+      if (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight) {
+        canvas.width = container.clientWidth
+        canvas.height = container.clientHeight
+      }
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.strokeStyle = "#00ff00"
       ctx.lineWidth = 2
+
+      const { offsetX, offsetY, scale } = getVideoCoverOffset()
 
       const smoothed = targetPolygons.current.map((poly, i) =>
         lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current),
@@ -88,8 +126,8 @@ export default function CameraView() {
       smoothed.forEach((polygon) => {
         ctx.beginPath()
         polygon.forEach((p, i) => {
-          const x = p.x * canvas.width
-          const y = p.y * canvas.height
+          const x = p.x * video.videoWidth * scale - offsetX
+          const y = p.y * video.videoHeight * scale - offsetY
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
         })
         ctx.closePath()
@@ -151,15 +189,19 @@ export default function CameraView() {
 
     startCamera()
 
+    const handleResize = () => setupCanvases()
+    window.addEventListener("resize", handleResize)
+
     return () => {
       if (detectionTimer) clearInterval(detectionTimer)
       cancelAnimationFrame(rafId)
+      window.removeEventListener("resize", handleResize)
       if (stream) stream.getTracks().forEach((t) => t.stop())
     }
   }, [])
 
   return (
-    <div className="relative w-full h-full bg-black">
+    <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden">
       <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" muted playsInline autoPlay />
       <canvas ref={overlayRef} className="absolute inset-0 w-full h-full pointer-events-none" />
       <canvas ref={captureRef} className="hidden" />
