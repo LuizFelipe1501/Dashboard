@@ -41,6 +41,12 @@ export default function CameraView() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream
           videoRef.current.onloadedmetadata = () => {
+            console.log(
+              "[v0] Vídeo carregado - dimensões:",
+              videoRef.current?.videoWidth,
+              "x",
+              videoRef.current?.videoHeight,
+            )
             videoRef.current?.play().catch((e) => console.error("Play error:", e))
             setupCanvases()
             animate()
@@ -54,66 +60,34 @@ export default function CameraView() {
 
     function setupCanvases() {
       const video = videoRef.current
-      const container = containerRef.current
-      if (!video || !video.videoWidth || !video.videoHeight || !container) {
+      if (!video || !video.videoWidth || !video.videoHeight) {
         setTimeout(setupCanvases, 300)
         return
       }
 
-      const containerWidth = container.clientWidth
-      const containerHeight = container.clientHeight
-
-      if (overlayRef.current) {
-        overlayRef.current.width = containerWidth
-        overlayRef.current.height = containerHeight
-      }
       if (captureRef.current) {
         captureRef.current.width = video.videoWidth
         captureRef.current.height = video.videoHeight
       }
+
+      updateOverlaySize()
     }
 
-    function getVideoContainTransform() {
-      const video = videoRef.current
+    function updateOverlaySize() {
       const container = containerRef.current
-      if (!video || !container || !video.videoWidth || !video.videoHeight) {
-        return { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 }
-      }
+      const overlay = overlayRef.current
+      if (!container || !overlay) return
 
-      const videoW = video.videoWidth
-      const videoH = video.videoHeight
-      const containerW = container.clientWidth
-      const containerH = container.clientHeight
-
-      const videoRatio = videoW / videoH
-      const containerRatio = containerW / containerH
-
-      let renderW: number
-      let renderH: number
-
-      // object-contain: o vídeo cabe inteiro no container, pode ter barras pretas
-      if (containerRatio > videoRatio) {
-        // Container mais largo - altura do vídeo = altura do container
-        renderH = containerH
-        renderW = containerH * videoRatio
-      } else {
-        // Container mais alto - largura do vídeo = largura do container
-        renderW = containerW
-        renderH = containerW / videoRatio
-      }
-
-      // Offset para centralizar (barras pretas em volta)
-      const offsetX = (containerW - renderW) / 2
-      const offsetY = (containerH - renderH) / 2
-
-      return { scaleX: renderW, scaleY: renderH, offsetX, offsetY }
+      overlay.width = container.clientWidth
+      overlay.height = container.clientHeight
     }
 
     function animate() {
       const canvas = overlayRef.current
-      const video = videoRef.current
       const container = containerRef.current
-      if (!canvas || !video || !container) return
+      const video = videoRef.current
+      if (!canvas || !container || !video) return
+
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
@@ -126,17 +100,34 @@ export default function CameraView() {
       ctx.strokeStyle = "#00ff00"
       ctx.lineWidth = 2
 
-      const { scaleX, scaleY, offsetX, offsetY } = getVideoContainTransform()
-
       const smoothed = targetPolygons.current.map((poly, i) =>
         lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current),
       )
 
+      const videoRatio = video.videoWidth / video.videoHeight
+      const containerRatio = canvas.width / canvas.height
+
+      let scale: number
+      let offsetX = 0
+      let offsetY = 0
+
+      if (containerRatio > videoRatio) {
+        // Container é mais largo - vídeo preenche largura, corta altura
+        scale = canvas.width / video.videoWidth
+        const scaledHeight = video.videoHeight * scale
+        offsetY = (canvas.height - scaledHeight) / 2
+      } else {
+        // Container é mais alto - vídeo preenche altura, corta largura
+        scale = canvas.height / video.videoHeight
+        const scaledWidth = video.videoWidth * scale
+        offsetX = (canvas.width - scaledWidth) / 2
+      }
+
       smoothed.forEach((polygon) => {
         ctx.beginPath()
         polygon.forEach((p, i) => {
-          const x = p.x * scaleX + offsetX
-          const y = p.y * scaleY + offsetY
+          const x = p.x * video.videoWidth * scale + offsetX
+          const y = p.y * video.videoHeight * scale + offsetY
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
         })
         ctx.closePath()
@@ -198,20 +189,19 @@ export default function CameraView() {
 
     startCamera()
 
-    const handleResize = () => setupCanvases()
-    window.addEventListener("resize", handleResize)
+    window.addEventListener("resize", updateOverlaySize)
 
     return () => {
       if (detectionTimer) clearInterval(detectionTimer)
       cancelAnimationFrame(rafId)
-      window.removeEventListener("resize", handleResize)
       if (stream) stream.getTracks().forEach((t) => t.stop())
+      window.removeEventListener("resize", updateOverlaySize)
     }
   }, [])
 
   return (
-    <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden">
-      <video ref={videoRef} className="absolute inset-0 w-full h-full object-contain" muted playsInline autoPlay />
+    <div ref={containerRef} className="relative w-full h-full bg-black">
+      <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" muted playsInline autoPlay />
       <canvas ref={overlayRef} className="absolute inset-0 w-full h-full pointer-events-none" />
       <canvas ref={captureRef} className="hidden" />
     </div>
