@@ -36,7 +36,6 @@ export default function CameraView() {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 } }
         });
-
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.onloadedmetadata = () => {
@@ -47,15 +46,14 @@ export default function CameraView() {
           };
         }
       } catch (err) {
-        console.error("Erro ao acessar câmera:", err);
+        console.error("Erro na câmera:", err);
       }
     }
 
     function setupCanvases() {
       const video = videoRef.current;
-      if (!video) return;
-
-      // O canvas de captura sempre terá o tamanho real do vídeo para o backend
+      if (!video || !video.videoWidth) return;
+      
       if (captureRef.current) {
         captureRef.current.width = video.videoWidth;
         captureRef.current.height = video.videoHeight;
@@ -64,21 +62,28 @@ export default function CameraView() {
     }
 
     function updateOverlaySize() {
-      if (containerRef.current && overlayRef.current) {
-        overlayRef.current.width = containerRef.current.clientWidth;
-        overlayRef.current.height = containerRef.current.clientHeight;
-      }
+      const container = containerRef.current;
+      const overlay = overlayRef.current;
+      if (!container || !overlay) return;
+      
+      // Sincroniza o tamanho do desenho com o tamanho visível na tela
+      overlay.width = container.clientWidth;
+      overlay.height = container.clientHeight;
     }
 
     function animate() {
       const canvas = overlayRef.current;
       const video = videoRef.current;
       const container = containerRef.current;
-      if (!canvas || !video || !container) return;
+      
+      if (!canvas || !video || !container || !video.videoWidth) {
+        rafId = requestAnimationFrame(animate);
+        return;
+      }
 
       const ctx = canvas.getContext("2d")!;
       
-      // Ajusta o canvas se o container mudar de tamanho
+      // Redimensiona se a janela mudar
       if (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight) {
         updateOverlaySize();
       }
@@ -87,10 +92,12 @@ export default function CameraView() {
       ctx.strokeStyle = "#00ff00";
       ctx.lineWidth = 3;
 
-      // --- MATEMÁTICA DE ALINHAMENTO ---
-      // Como o vídeo usa object-cover, ele "transborda" o container.
-      // Calculamos a escala baseada no maior lado para cobrir tudo.
+      // --- MATEMÁTICA DE POSICIONAMENTO ---
+      // 1. Calculamos a escala necessária para cobrir o container (object-cover)
       const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
+      
+      // 2. Calculamos quanto do vídeo "transbordou" e foi cortado
+      // Offset é a diferença entre o canvas e o vídeo escalado, dividido por 2 (centralização)
       const offsetX = (canvas.width - video.videoWidth * scale) / 2;
       const offsetY = (canvas.height - video.videoHeight * scale) / 2;
 
@@ -101,9 +108,14 @@ export default function CameraView() {
       smoothed.forEach(polygon => {
         ctx.beginPath();
         polygon.forEach((p, i) => {
-          // Converte a coordenada 0-1 do backend para a posição exata na tela
+          /**
+           * MAPEAMENTO FINAL:
+           * Pegamos o ponto normalizado (0 a 1) e projetamos no espaço visível.
+           * Fórmula: (Ponto * TamanhoReal * Escala) + DeslocamentoCentral
+           */
           const x = p.x * video.videoWidth * scale + offsetX;
           const y = p.y * video.videoHeight * scale + offsetY;
+          
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         });
         ctx.closePath();
@@ -117,49 +129,35 @@ export default function CameraView() {
     async function detectOnce() {
       if (busy.current || !videoRef.current || !captureRef.current) return;
       busy.current = true;
-
       const video = videoRef.current;
       const canvas = captureRef.current;
       const ctx = canvas.getContext("2d")!;
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
       canvas.toBlob(async blob => {
-        if (!blob) {
-          busy.current = false;
-          return;
-        }
-
+        if (!blob) { busy.current = false; return; }
         try {
           const formData = new FormData();
           formData.append("file", blob, "frame.jpg");
-
           const res = await fetch("https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/detect", {
-            method: "POST",
-            body: formData
+            method: "POST", body: formData
           });
-
           const data = await res.json();
           const polygons = data.polygons ?? [];
-
           prevPolygons.current = targetPolygons.current.length ? targetPolygons.current : polygons;
           targetPolygons.current = polygons;
           alpha.current = 0;
-        } catch (err) {
-          console.error(err);
-        } finally {
-          busy.current = false;
-        }
+        } catch (err) { console.error(err); } 
+        finally { busy.current = false; }
       }, "image/jpeg", 0.7);
     }
 
     function startDetectionLoop() {
-      detectionTimer = setInterval(detectOnce, 1500); 
+      detectionTimer = setInterval(detectOnce, 1500);
     }
 
     startCamera();
     window.addEventListener("resize", updateOverlaySize);
-
     return () => {
       clearInterval(detectionTimer);
       cancelAnimationFrame(rafId);
@@ -168,25 +166,20 @@ export default function CameraView() {
   }, []);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden rounded-xl border border-primary/20">
-      {/* IMPORTANTE: Usamos scale-x-[-1] tanto no vídeo quanto no canvas.
-        Isso inverte os dois visualmente (efeito espelho), garantindo que
-        as coordenadas do backend batam com a sua posição na tela.
-      */}
+    <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden rounded-xl">
+      {/* Vídeo base */}
       <video
         ref={videoRef}
-        className="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1]"
+        className="absolute inset-0 w-full h-full object-cover"
         muted
         playsInline
         autoPlay
       />
-
+      {/* Canvas com os contornos (Sobreposição Perfeita) */}
       <canvas
         ref={overlayRef}
-        className="absolute top-0 left-0 w-full h-full pointer-events-none scale-x-[-1]"
+        className="absolute inset-0 w-full h-full pointer-events-none z-10"
       />
-
-      {/* Canvas invisível para capturar o frame real */}
       <canvas ref={captureRef} className="hidden" />
     </div>
   );
