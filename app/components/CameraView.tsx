@@ -87,16 +87,16 @@ export default function CameraView() {
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
-      // Atualiza tamanho do canvas se necessário
+      // Atualiza tamanho do canvas se o container mudou (resize)
       if (canvas.width !== containerRef.current?.clientWidth || canvas.height !== containerRef.current?.clientHeight) {
         updateOverlaySize()
       }
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.strokeStyle = "#00ff00"
-      ctx.lineWidth = 4  // mais grosso para ficar mais visível
+      ctx.lineWidth = 3
 
-      // Cálculo de escala e offset (corrigido e com padding interno para "aumentar" o contorno)
+      // Cálculo de escala e offset para alinhar polígonos com o vídeo exibido
       const videoRatio = video.videoWidth / video.videoHeight
       const canvasRatio = canvas.width / canvas.height
 
@@ -105,17 +105,16 @@ export default function CameraView() {
       let offsetY = 0
 
       if (canvasRatio > videoRatio) {
+        // Container mais largo → vídeo preenche altura, corta largura
         scale = canvas.height / video.videoHeight
         const scaledWidth = video.videoWidth * scale
         offsetX = (canvas.width - scaledWidth) / 2
       } else {
+        // Container mais alto → vídeo preenche largura, corta altura
         scale = canvas.width / video.videoWidth
         const scaledHeight = video.videoHeight * scale
         offsetY = (canvas.height - scaledHeight) / 2
       }
-
-      // Aumenta o contorno em ~5-10% (para ficar maior e mais bonito)
-      scale *= 1.08  // ajuste aqui (1.05 a 1.12) até ficar perfeito na sua tela
 
       const smoothed = targetPolygons.current.map((poly, i) =>
         lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current),
@@ -125,7 +124,7 @@ export default function CameraView() {
         ctx.beginPath()
         polygon.forEach((p, i) => {
           const x = p.x * video.videoWidth * scale + offsetX
-          const y = (1 - p.y) * video.videoHeight * scale + offsetY  // ← Inverte Y (corrige cabeça para baixo)
+          const y = p.y * video.videoHeight * scale + offsetY
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
         })
         ctx.closePath()
@@ -134,7 +133,8 @@ export default function CameraView() {
 
       alpha.current = Math.min(alpha.current + 0.08, 1)
       rafId = requestAnimationFrame(animate)
-    } 
+    }
+
     async function detectOnce() {
       if (busy.current || !videoRef.current || !captureRef.current) return
       busy.current = true
