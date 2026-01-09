@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import HudPanel from "./HudPanel";
 
 type Props = {
   demo?: number | null;
@@ -15,8 +14,6 @@ export default function PeopleCounter({ demo = null }: Props) {
       return;
     }
 
-    let interval: NodeJS.Timeout;
-
     const fetchPeople = async () => {
       try {
         const res = await fetch(
@@ -30,20 +27,19 @@ export default function PeopleCounter({ demo = null }: Props) {
     };
 
     fetchPeople();
-    interval = setInterval(fetchPeople, 4000);
-
+    const interval = setInterval(fetchPeople, 4000);
     return () => clearInterval(interval);
   }, [demo]);
 
-return (
-    <div className="bg-purple-900/60 border-2 border-yellow-400 rounded-2xl p-6 text-center shadow-md">
-      <h2 className="text-base uppercase font-semibold text-yellow-300 tracking-wide">
+  return (
+    <div className="text-center">
+      <h2 className="text-xs uppercase tracking-wide text-yellow-300">
         People Detected
       </h2>
-      <p className="mt-3 text-5xl font-bold text-yellow-300">
-        {demo ?? 0}
+      <p className="mt-1 text-3xl sm:text-4xl font-bold text-yellow-300">
+        {count}
       </p>
-      <p className="mt-2 text-sm text-purple-300">
+      <p className="mt-1 text-xs text-purple-300">
         Camera-based detection
       </p>
     </div>

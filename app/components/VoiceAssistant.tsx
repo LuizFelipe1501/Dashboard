@@ -141,48 +141,45 @@ export default function VoiceAssistant({
   }
 
   return (
-    <div className="bg-purple-900/70 border-2 border-yellow-400 rounded-3xl p-6 w-full shadow-lg">
-      <div className="flex items-center gap-6 flex-col sm:flex-row">
-        {/* Avatar */}
+    <div className="text-center sm:text-left">
+      <div className="flex items-center gap-4 flex-col sm:flex-row justify-center sm:justify-start">
+        {/* Avatar menor */}
         <div className="relative shrink-0">
           <img
             src="/lumi.png"
             alt="Lumi"
             className={`
-              w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-yellow-300
-              transition-all duration-300
-              ${status === "listening" ? "ring-4 ring-purple-400 animate-pulse scale-110" : ""}
-              ${status === "speaking" ? "ring-4 ring-green-400 scale-105" : ""}
+              w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-yellow-300
+              transition-all
+              ${status === "listening" ? "ring-2 ring-purple-400 animate-pulse" : ""}
+              ${status === "speaking" ? "ring-2 ring-green-400" : ""}
             `}
           />
-          <div className="absolute inset-0 rounded-full blur-xl bg-purple-500/30 -z-10" />
         </div>
 
-        {/* Texto + Status + Botão */}
-        <div className="flex-1 text-center sm:text-left">
-          <h2 className="text-2xl font-bold text-yellow-300">
+        <div>
+          <h2 className="text-lg sm:text-xl font-bold text-yellow-300">
             Lumi Voice Assistant
           </h2>
-
-          <p className="text-lg text-purple-200 mt-2">
+          <p className="text-sm text-purple-200 mt-1">
             {status === "idle" && "Press the button and speak naturally"}
             {status === "listening" && "Listening…"}
-            {status === "thinking" && "Processing your request…"}
-            {status === "speaking" && "Responding with real context"}
+            {status === "thinking" && "Processing…"}
+            {status === "speaking" && "Responding…"}
           </p>
 
           <button
             onClick={startListening}
             disabled={status !== "idle"}
             className="
-              mt-4 px-8 py-3 bg-purple-600 hover:bg-purple-500
-              text-white font-bold rounded-full text-lg
-              border-2 border-yellow-300 shadow-lg
-              transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed
-              flex items-center gap-3 mx-auto sm:mx-0
+              mt-3 px-6 py-2 bg-purple-600 hover:bg-purple-500
+              text-white font-medium rounded-full text-sm sm:text-base
+              border-2 border-yellow-300 shadow-md
+              transition-all hover:scale-105 disabled:opacity-60
+              flex items-center gap-2 mx-auto sm:mx-0
             "
           >
-            <span className="text-2xl">🎤</span> Ask Lumi
+            <span className="text-xl">🎤</span> Ask Lumi
           </button>
         </div>
       </div>
