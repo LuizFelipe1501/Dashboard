@@ -1,24 +1,168 @@
-export default function InstructionBox() {
+"use client"
+
+import { useEffect, useRef } from "react"
+
+type Point = { x: number; y: number }
+
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t
+}
+
+function lerpPolygon(from: Point[], to: Point[], t: number): Point[] {
+  if (!from || from.length !== to.length) return to
+  return from.map((p, i) => ({
+    x: lerp(p.x, to[i].x, t),
+    y: lerp(p.y, to[i].y, t),
+  }))
+}
+
+export default function CameraView() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const overlayRef = useRef<HTMLCanvasElement>(null)
+  const captureRef = useRef<HTMLCanvasElement>(null)
+
+  const busy = useRef(false)
+  const prevPolygons = useRef<Point[][]>([])
+  const targetPolygons = useRef<Point[][]>([])
+  const alpha = useRef(1)
+
+  useEffect(() => {
+    let detectionTimer: NodeJS.Timeout | undefined
+    let rafId: number
+    let stream: MediaStream | null = null
+
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        })
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play().catch((e) => console.error("Play error:", e))
+            setupCanvases()
+            animate()
+            startDetectionLoop()
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao acessar câmera:", err)
+      }
+    }
+
+    function setupCanvases() {
+      const video = videoRef.current
+      if (!video || !video.videoWidth || !video.videoHeight) {
+        setTimeout(setupCanvases, 300)
+        return
+      }
+
+      const w = video.videoWidth
+      const h = video.videoHeight
+
+      if (overlayRef.current) {
+        overlayRef.current.width = w
+        overlayRef.current.height = h
+      }
+      if (captureRef.current) {
+        captureRef.current.width = w
+        captureRef.current.height = h
+      }
+    }
+
+    function animate() {
+      const canvas = overlayRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.strokeStyle = "#00ff00"
+      ctx.lineWidth = 2
+
+      const smoothed = targetPolygons.current.map((poly, i) =>
+        lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current),
+      )
+
+      smoothed.forEach((polygon) => {
+        ctx.beginPath()
+        polygon.forEach((p, i) => {
+          const x = p.x * canvas.width
+          const y = p.y * canvas.height
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+        })
+        ctx.closePath()
+        ctx.stroke()
+      })
+
+      alpha.current = Math.min(alpha.current + 0.08, 1)
+      rafId = requestAnimationFrame(animate)
+    }
+
+    async function detectOnce() {
+      if (busy.current || !videoRef.current || !captureRef.current) return
+      busy.current = true
+
+      const video = videoRef.current
+      const canvas = captureRef.current
+      const ctx = canvas.getContext("2d")
+
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+        canvas.toBlob(
+          async (blob) => {
+            if (!blob) {
+              busy.current = false
+              return
+            }
+
+            try {
+              const formData = new FormData()
+              formData.append("file", blob, "frame.jpg")
+
+              const res = await fetch(
+                "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/detect",
+                { method: "POST", body: formData },
+              )
+
+              const data = await res.json()
+              const polygons = data.polygons ?? []
+
+              prevPolygons.current = targetPolygons.current.length ? targetPolygons.current : polygons
+              targetPolygons.current = polygons
+              alpha.current = 0
+            } catch (err) {
+              console.error("Detect error:", err)
+            } finally {
+              busy.current = false
+            }
+          },
+          "image/jpeg",
+          0.7,
+        )
+      }
+    }
+
+    function startDetectionLoop() {
+      detectionTimer = setInterval(detectOnce, 2000)
+    }
+
+    startCamera()
+
+    return () => {
+      if (detectionTimer) clearInterval(detectionTimer)
+      cancelAnimationFrame(rafId)
+      if (stream) stream.getTracks().forEach((t) => t.stop())
+    }
+  }, [])
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4 text-gray-900">How to Use the Demo</h2>
-
-      <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-800">
-        <li>Allow camera and microphone access.</li>
-        <li>
-          Click the <span className="font-semibold text-gray-900">"Ask Lumi"</span> button.
-        </li>
-        <li>
-          The system will respond using real visual context.
-          <ul className="mt-2 pl-6 list-disc space-y-1 text-xs text-gray-700">
-            <li>"Is anyone around me?"</li>
-            <li>"How many people do you see?"</li>
-            <li>"Is the environment safe?"</li>
-          </ul>
-        </li>
-      </ol>
-
-      <p className="mt-4 text-xs italic text-gray-700">This is a demo. No data is stored.</p>
+    <div className="relative w-full h-full bg-black">
+      <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" muted playsInline autoPlay />
+      <canvas ref={overlayRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+      <canvas ref={captureRef} className="hidden" />
     </div>
   )
 }

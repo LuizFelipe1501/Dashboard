@@ -130,46 +130,38 @@ export default function VoiceAssistant({ peopleDetected, sceneState }: Props) {
   }
 
   return (
-    <div className="text-center sm:text-left">
-      <div className="flex items-center gap-4 flex-col sm:flex-row justify-center sm:justify-start">
-        {/* Avatar menor */}
-        <div className="relative shrink-0">
-          <img
-            src="/lumi.png"
-            alt="Lumi"
-            className={`
-              w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-yellow-300
-              transition-all
-              ${status === "listening" ? "ring-2 ring-purple-400 animate-pulse" : ""}
-              ${status === "speaking" ? "ring-2 ring-green-400" : ""}
-            `}
-          />
-        </div>
-
-        <div>
-          <h2 className="text-lg sm:text-xl font-bold text-yellow-300">Lumi Voice Assistant</h2>
-          <p className="text-sm text-purple-200 mt-1">
-            {status === "idle" && "Press the button and speak naturally"}
-            {status === "listening" && "Listening…"}
-            {status === "thinking" && "Processing…"}
-            {status === "speaking" && "Responding…"}
-          </p>
-
-          <button
-            onClick={startListening}
-            disabled={status !== "idle"}
-            className="
-              mt-3 px-6 py-2 bg-purple-600 hover:bg-purple-500
-              text-white font-medium rounded-full text-sm sm:text-base
-              border-2 border-yellow-300 shadow-md
-              transition-all hover:scale-105 disabled:opacity-60
-              flex items-center gap-2 mx-auto sm:mx-0
-            "
-          >
-            <span className="text-xl">🎤</span> Ask Lumi
-          </button>
+    <div className="flex flex-col items-center">
+      {/* Avatar da Lumi */}
+      <div className="relative">
+        <div
+          className={`w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-yellow-400 shadow-2xl bg-gradient-to-br from-purple-600 to-indigo-700 ${
+            status === "listening" ? "ring-4 ring-purple-400 animate-pulse" : ""
+          } ${status === "speaking" ? "ring-4 ring-green-400" : ""}`}
+        >
+          <img src="/lumi.png" alt="Lumi" className="w-full h-full object-cover" />
         </div>
       </div>
+
+      {/* Botão Ask Lumi */}
+      <button
+        onClick={startListening}
+        disabled={status !== "idle"}
+        className={`mt-3 px-6 py-3 rounded-full font-bold text-white shadow-xl transition-all border-2 border-white flex items-center gap-2 ${
+          status === "listening"
+            ? "bg-gradient-to-r from-pink-500 to-purple-600"
+            : status === "thinking"
+              ? "bg-gradient-to-r from-yellow-500 to-orange-500"
+              : status === "speaking"
+                ? "bg-gradient-to-r from-green-500 to-teal-500"
+                : "bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
+        } disabled:opacity-70`}
+      >
+        <span className="text-xl">🎤</span>
+        {status === "idle" && "Ask Lumi"}
+        {status === "listening" && "Listening..."}
+        {status === "thinking" && "Thinking..."}
+        {status === "speaking" && "Speaking..."}
+      </button>
     </div>
   )
 }

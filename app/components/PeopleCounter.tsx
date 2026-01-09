@@ -31,9 +31,9 @@ export default function PeopleCounter({ demo = null }: Props) {
 
   return (
     <div className="text-center">
-      <h2 className="text-sm uppercase tracking-widest text-white font-semibold mb-3">People Detected</h2>
-      <p className="text-5xl font-bold text-pink-300 mb-2">{count}</p>
-      <p className="text-xs text-purple-200">Camera-based detection</p>
+      <h2 className="text-sm font-bold text-yellow-300">People Detected:</h2>
+      <p className="text-3xl font-bold text-cyan-400 my-1">{count}</p>
+      <p className="text-xs text-yellow-400 italic">Camera-Based Detection</p>
     </div>
   )
 }
