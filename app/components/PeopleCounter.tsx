@@ -1,47 +1,39 @@
-"use client";
-import { useEffect, useState } from "react";
+"use client"
+import { useEffect, useState } from "react"
 
 type Props = {
-  demo?: number | null;
-};
+  demo?: number | null
+}
 
 export default function PeopleCounter({ demo = null }: Props) {
-  const [count, setCount] = useState<number>(0);
+  const [count, setCount] = useState<number>(0)
 
   useEffect(() => {
     if (demo !== null) {
-      setCount(demo);
-      return;
+      setCount(demo)
+      return
     }
 
     const fetchPeople = async () => {
       try {
-        const res = await fetch(
-          "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/status"
-        );
-        const data = await res.json();
-        setCount(data.people_detected ?? 0);
+        const res = await fetch("https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/status")
+        const data = await res.json()
+        setCount(data.people_detected ?? 0)
       } catch {
-        setCount(prev => (prev >= 3 ? 1 : prev + 1));
+        setCount((prev) => (prev >= 3 ? 1 : prev + 1))
       }
-    };
+    }
 
-    fetchPeople();
-    const interval = setInterval(fetchPeople, 4000);
-    return () => clearInterval(interval);
-  }, [demo]);
+    fetchPeople()
+    const interval = setInterval(fetchPeople, 4000)
+    return () => clearInterval(interval)
+  }, [demo])
 
   return (
     <div className="text-center">
-      <h2 className="text-xs uppercase tracking-wide text-yellow-300">
-        People Detected
-      </h2>
-      <p className="mt-1 text-3xl sm:text-4xl font-bold text-yellow-300">
-        {count}
-      </p>
-      <p className="mt-1 text-xs text-purple-300">
-        Camera-based detection
-      </p>
+      <h2 className="text-sm uppercase tracking-widest text-white font-semibold mb-3">People Detected</h2>
+      <p className="text-5xl font-bold text-pink-300 mb-2">{count}</p>
+      <p className="text-xs text-purple-200">Camera-based detection</p>
     </div>
-  );
+  )
 }

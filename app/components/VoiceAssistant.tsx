@@ -140,7 +140,7 @@ export default function VoiceAssistant({
     setStatus("idle");
   }
 
-  return (
+ return (
     <div className="text-center sm:text-left">
       <div className="flex items-center gap-4 flex-col sm:flex-row justify-center sm:justify-start">
         {/* Avatar menor */}
@@ -158,9 +158,7 @@ export default function VoiceAssistant({
         </div>
 
         <div>
-          <h2 className="text-lg sm:text-xl font-bold text-yellow-300">
-            Lumi Voice Assistant
-          </h2>
+          <h2 className="text-lg sm:text-xl font-bold text-yellow-300">Lumi Voice Assistant</h2>
           <p className="text-sm text-purple-200 mt-1">
             {status === "idle" && "Press the button and speak naturally"}
             {status === "listening" && "Listening…"}
@@ -184,5 +182,5 @@ export default function VoiceAssistant({
         </div>
       </div>
     </div>
-  );
+  )
 }
