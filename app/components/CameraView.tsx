@@ -41,13 +41,8 @@ export default function CameraView() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream
           videoRef.current.onloadedmetadata = () => {
-            console.log(
-              "[v0] Vídeo carregado - dimensões:",
-              videoRef.current?.videoWidth,
-              "x",
-              videoRef.current?.videoHeight,
-            )
-            videoRef.current?.play().catch((e) => console.error("Play error:", e))
+            console.log("Vídeo carregado - dimensões:", videoRef.current?.videoWidth, "x", videoRef.current?.videoHeight)
+            videoRef.current?.play().catch(e => console.error("Play error:", e))
             setupCanvases()
             animate()
             startDetectionLoop()
@@ -65,11 +60,13 @@ export default function CameraView() {
         return
       }
 
+      // captureRef usa dimensões reais do vídeo (para enviar ao backend)
       if (captureRef.current) {
         captureRef.current.width = video.videoWidth
         captureRef.current.height = video.videoHeight
       }
 
+      // overlay usa dimensões do container (para desenhar sobre o vídeo escalado)
       updateOverlaySize()
     }
 
@@ -84,46 +81,46 @@ export default function CameraView() {
 
     function animate() {
       const canvas = overlayRef.current
-      const container = containerRef.current
       const video = videoRef.current
-      if (!canvas || !container || !video) return
+      if (!canvas || !video) return
 
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
-      if (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight) {
-        canvas.width = container.clientWidth
-        canvas.height = container.clientHeight
+      // Atualiza tamanho do canvas se o container mudou (resize)
+      if (canvas.width !== containerRef.current?.clientWidth || canvas.height !== containerRef.current?.clientHeight) {
+        updateOverlaySize()
       }
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.strokeStyle = "#00ff00"
-      ctx.lineWidth = 2
+      ctx.lineWidth = 3
 
-      const smoothed = targetPolygons.current.map((poly, i) =>
-        lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current),
-      )
-
+      // Cálculo de escala e offset para alinhar polígonos com o vídeo exibido
       const videoRatio = video.videoWidth / video.videoHeight
-      const containerRatio = canvas.width / canvas.height
+      const canvasRatio = canvas.width / canvas.height
 
       let scale: number
       let offsetX = 0
       let offsetY = 0
 
-      if (containerRatio > videoRatio) {
-        // Container é mais largo - vídeo preenche largura, corta altura
-        scale = canvas.width / video.videoWidth
-        const scaledHeight = video.videoHeight * scale
-        offsetY = (canvas.height - scaledHeight) / 2
-      } else {
-        // Container é mais alto - vídeo preenche altura, corta largura
+      if (canvasRatio > videoRatio) {
+        // Container mais largo → vídeo preenche altura, corta largura
         scale = canvas.height / video.videoHeight
         const scaledWidth = video.videoWidth * scale
         offsetX = (canvas.width - scaledWidth) / 2
+      } else {
+        // Container mais alto → vídeo preenche largura, corta altura
+        scale = canvas.width / video.videoWidth
+        const scaledHeight = video.videoHeight * scale
+        offsetY = (canvas.height - scaledHeight) / 2
       }
 
-      smoothed.forEach((polygon) => {
+      const smoothed = targetPolygons.current.map((poly, i) =>
+        lerpPolygon(prevPolygons.current[i] ?? poly, poly, alpha.current),
+      )
+
+      smoothed.forEach(polygon => {
         ctx.beginPath()
         polygon.forEach((p, i) => {
           const x = p.x * video.videoWidth * scale + offsetX
@@ -149,37 +146,33 @@ export default function CameraView() {
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-        canvas.toBlob(
-          async (blob) => {
-            if (!blob) {
-              busy.current = false
-              return
-            }
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            busy.current = false
+            return
+          }
 
-            try {
-              const formData = new FormData()
-              formData.append("file", blob, "frame.jpg")
+          try {
+            const formData = new FormData()
+            formData.append("file", blob, "frame.jpg")
 
-              const res = await fetch(
-                "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/detect",
-                { method: "POST", body: formData },
-              )
+            const res = await fetch(
+              "https://hallucination.calmwave-93bbec10.brazilsouth.azurecontainerapps.io/detect",
+              { method: "POST", body: formData }
+            )
 
-              const data = await res.json()
-              const polygons = data.polygons ?? []
+            const data = await res.json()
+            const polygons = data.polygons ?? []
 
-              prevPolygons.current = targetPolygons.current.length ? targetPolygons.current : polygons
-              targetPolygons.current = polygons
-              alpha.current = 0
-            } catch (err) {
-              console.error("Detect error:", err)
-            } finally {
-              busy.current = false
-            }
-          },
-          "image/jpeg",
-          0.7,
-        )
+            prevPolygons.current = targetPolygons.current.length ? targetPolygons.current : polygons
+            targetPolygons.current = polygons
+            alpha.current = 0
+          } catch (err) {
+            console.error("Detect error:", err)
+          } finally {
+            busy.current = false
+          }
+        }, "image/jpeg", 0.7)
       }
     }
 
@@ -189,20 +182,30 @@ export default function CameraView() {
 
     startCamera()
 
-    window.addEventListener("resize", updateOverlaySize)
+    const resizeListener = () => updateOverlaySize()
+    window.addEventListener("resize", resizeListener)
 
     return () => {
       if (detectionTimer) clearInterval(detectionTimer)
       cancelAnimationFrame(rafId)
-      if (stream) stream.getTracks().forEach((t) => t.stop())
-      window.removeEventListener("resize", updateOverlaySize)
+      if (stream) stream.getTracks().forEach(t => t.stop())
+      window.removeEventListener("resize", resizeListener)
     }
   }, [])
 
   return (
     <div ref={containerRef} className="relative w-full h-full bg-black">
-      <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" muted playsInline autoPlay />
-      <canvas ref={overlayRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+      <video
+        ref={videoRef}
+        className="absolute inset-0 w-full h-full object-cover"
+        muted
+        playsInline
+        autoPlay
+      />
+      <canvas
+        ref={overlayRef}
+        className="absolute inset-0 w-full h-full pointer-events-none"
+      />
       <canvas ref={captureRef} className="hidden" />
     </div>
   )
